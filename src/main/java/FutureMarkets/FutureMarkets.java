@@ -1,17 +1,20 @@
 package FutureMarkets;
 
+import org.apache.commons.codec.StringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeBase;
 import org.hyperledger.java.shim.ChaincodeStub;
 import org.hyperledger.protos.TableProto;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
 import java.util.*;
 import java.lang.Math;
 
+// TODO all args should be int, not string
 public class FutureMarkets extends ChaincodeBase {
 
     private static final String userTable = "UserTable";
@@ -27,20 +30,24 @@ public class FutureMarkets extends ChaincodeBase {
                 init(stub, function, args);
                 break;
             case "post_order":
-                // args = orderID, traderID, price, volume
-                // or orderID, traderID, volume
+                // args = traderID, price, volume
+                // or traderID, volume
                 postOrder(stub, args, false);
                 break;
             case "update_order":
+                // args = orderID, traderID, price, volume
+                // or orderID, traderID, volume
                 postOrder(stub, args, true);
                 break;
             case "add_trader":
                 deposit(stub, args, false);
                 break;
+            // TODO: values provided must represent value to be deposited(existing + provided), not a redefinition of values
             case "deposit":
                 deposit(stub, args, true);
                 break;
             case "delete":
+                // args = id, option {trader, order, market_order}
                 delete(stub, args);
                 break;
             case "build_order_book":
@@ -61,15 +68,21 @@ public class FutureMarkets extends ChaincodeBase {
         int money_amount = 0;
         int volume = 0;
 
-
         try {
-            fieldID = Integer.parseInt(args[0]);
-            money_amount = Integer.parseInt(args[1]);
-            volume = Integer.parseInt(args[2]);
-        }catch (NumberFormatException e){
+            if (update) {
+                fieldID = Integer.parseInt(args[0]);
+                money_amount = Integer.parseInt(args[1]);
+                volume = Integer.parseInt(args[2]);
+            } else {
+                fieldID = getTableSize(stub, userTable) + 1;
+                money_amount = Integer.parseInt(args[0]);
+                volume = Integer.parseInt(args[1]);
+            }
+        } catch (NumberFormatException e){
             log.error("Illegal field id -" + e.getMessage());
             return;
         }
+
 
         TableProto.Column col1 =
                 TableProto.Column.newBuilder()
@@ -122,13 +135,29 @@ public class FutureMarkets extends ChaincodeBase {
 
         List<TableProto.Column> cols = new ArrayList<TableProto.Column>();
 
-        if (args.length == 4) {
+        boolean isMarket = false;
+
+        log.info("Number of arguments = " + args.length);
+        if ((args.length == 3 && update) || (args.length == 2 && !update)) {
+            log.info("Type of order = Market");
+            isMarket = true;
+        }
+
+        if (isMarket == false) {
             tableName = orderBook;
             try {
-                orderID = Integer.parseInt(args[0]);
-                traderID = Integer.parseInt(args[1]);
-                price = Integer.parseInt(args[2]);
-                volume = Integer.parseInt(args[3]);
+                if (update) {
+                    orderID = Integer.parseInt(args[0]);
+                    traderID = Integer.parseInt(args[1]);
+                    price = Integer.parseInt(args[2]);
+                    volume = Integer.parseInt(args[3]);
+                } else {
+                    orderID = getTableSize(stub, tableName) + 1;
+                    traderID = Integer.parseInt(args[0]);
+                    price = Integer.parseInt(args[1]);
+                    volume = Integer.parseInt(args[2]);
+                }
+
             }catch (NumberFormatException e){
                 log.error("Illegal field id -" + e.getMessage());
                 return;
@@ -151,12 +180,18 @@ public class FutureMarkets extends ChaincodeBase {
             cols.add(col2);
             cols.add(col3);
             cols.add(col4);
-        }else if (args.length == 3) {
+        }else if (isMarket == true) {
             tableName = marketOrders;
             try {
-                orderID = Integer.parseInt(args[0]);
-                traderID = Integer.parseInt(args[1]);
-                volume = Integer.parseInt(args[2]);
+                if (update) {
+                    orderID = Integer.parseInt(args[0]);
+                    traderID = Integer.parseInt(args[1]);
+                    volume = Integer.parseInt(args[2]);
+                } else {
+                    orderID = getTableSize(stub, tableName) + 1;
+                    traderID = Integer.parseInt(args[0]);
+                    volume = Integer.parseInt(args[1]);
+                }
             }catch (NumberFormatException e){
                 log.error("Illegal field id -" + e.getMessage());
                 return;
@@ -224,7 +259,7 @@ public class FutureMarkets extends ChaincodeBase {
 
         for (int i = 1; i <= 5; i++)
         {
-            deposit(stub, new String[]{String.valueOf(i), "1000", "100"}, false);
+            deposit(stub, new String[]{"1000", "100"}, false);
         }
     }
 
@@ -278,7 +313,6 @@ public class FutureMarkets extends ChaincodeBase {
         return result;
     }
 
-    // TODO update IDs after deletion?
     private boolean delete(ChaincodeStub stub, String[] args){
         int fieldID = 0;
         String option = args[1];
@@ -306,19 +340,100 @@ public class FutureMarkets extends ChaincodeBase {
             case "order":
                 tableName = orderBook;
                 break;
+            case "market_order":
+                tableName = marketOrders;
+                break;
         }
 
         if (tableName == "")
         {
-            log.error(String.format("No matching name for option %1$s", option));
+            log.error(String.format("Table with name %1$s does not exist", option));
             return false;
         }
 
+        ArrayList<int[]> rows = queryTable(stub, tableName);
         boolean result = stub.deleteRow(tableName, key);
 
         if (result)
         {
             log.info(String.format("The row with id = %1$d successfully deleted from table %2$s", fieldID, tableName));
+
+            if (rows.size() != 1 && fieldID != rows.size()) {
+                // insert fieldID + 1
+                int[] firstRow = rows.get(fieldID);
+                int numOfCols  = firstRow.length;
+
+                List<TableProto.Column> cols = new ArrayList<TableProto.Column>();
+
+                TableProto.Column col1 =
+                        TableProto.Column.newBuilder()
+                                .setUint32(fieldID).build();
+
+                cols.add(col1);
+
+                for (int j = 1; j < numOfCols; j++) {
+                    TableProto.Column col =
+                            TableProto.Column.newBuilder()
+                                    .setInt32(firstRow[j]).build();
+                    cols.add(col);
+                }
+
+                TableProto.Row rowInsert = TableProto.Row.newBuilder()
+                        .addAllColumns(cols)
+                        .build();
+
+                try {
+                    log.info(String.format("inserting row %1$s", Arrays.toString(firstRow)));
+                    result = stub.insertRow(tableName, rowInsert);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                // update all subsequent rows
+                for (int i = fieldID + 1; i < rows.size(); i++) {
+                    int[] row = rows.get(i);
+
+                    List<TableProto.Column> updateCols = new ArrayList<TableProto.Column>();
+
+                    TableProto.Column colID =
+                            TableProto.Column.newBuilder()
+                                    .setUint32(i).build();
+
+                    updateCols.add(colID);
+
+                    for (int j = 1; j < row.length; j++) {
+                        TableProto.Column udateCol =
+                                TableProto.Column.newBuilder()
+                                        .setInt32(firstRow[j]).build();
+                        updateCols.add(udateCol);
+                    }
+
+                    TableProto.Row rowUpdate = TableProto.Row.newBuilder()
+                            .addAllColumns(updateCols)
+                            .build();
+
+                    try {
+                        log.info(String.format("updating row %1$s", Arrays.toString(row)));
+                        result = stub.replaceRow(tableName, rowUpdate);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                // delete last row
+                TableProto.Column delCol =
+                        TableProto.Column.newBuilder()
+                                .setUint32(rows.size()).build();
+                List<TableProto.Column> delKey = new ArrayList<>();
+                delKey.add(delCol);
+
+                log.info(String.format("Deleting row with id = %1$d", rows.size()));
+                result = stub.deleteRow(tableName, delKey);
+
+                if (!result) {
+                    log.error("An error happened while updating IDs");
+                }
+            }
         }
         else
         {
@@ -328,7 +443,6 @@ public class FutureMarkets extends ChaincodeBase {
         return result;
     }
 
-    // TODO handle deleted rows
     public ArrayList<int[]> queryTable(ChaincodeStub stub, String tableName) {
         //get the size of the table
         int size = getTableSize(stub, tableName);
