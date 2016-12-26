@@ -1,13 +1,11 @@
 package FutureMarkets;
 
-import org.apache.commons.codec.StringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeBase;
 import org.hyperledger.java.shim.ChaincodeStub;
 import org.hyperledger.protos.TableProto;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,11 +31,13 @@ public class FutureMarkets extends ChaincodeBase {
                 // args = traderID, price, volume
                 // or traderID, volume
                 postOrder(stub, args, false);
+                buildOrderBook(stub);
                 break;
             case "update_order":
                 // args = orderID, traderID, price, volume
                 // or orderID, traderID, volume
                 postOrder(stub, args, true);
+                buildOrderBook(stub);
                 break;
             case "add_trader":
                 deposit(stub, args, false);
@@ -47,14 +47,11 @@ public class FutureMarkets extends ChaincodeBase {
                 deposit(stub, args, true);
                 break;
             case "delete":
-                // args = id, option {trader, order, market_order}
+                // args = id, option : {trader, order, market_order}
                 delete(stub, args);
                 break;
             case "build_order_book":
                 buildOrderBook(stub);
-                break;
-            case "match_market":
-                matchMarketOrders(stub);
                 break;
             default:
                 log.error("No matching case for function:"+function);
@@ -143,7 +140,7 @@ public class FutureMarkets extends ChaincodeBase {
             isMarket = true;
         }
 
-        if (isMarket == false) {
+        if (!isMarket) {
             tableName = orderBook;
             try {
                 if (update) {
@@ -180,7 +177,7 @@ public class FutureMarkets extends ChaincodeBase {
             cols.add(col2);
             cols.add(col3);
             cols.add(col4);
-        }else if (isMarket == true) {
+        }else if (isMarket) {
             tableName = marketOrders;
             try {
                 if (update) {
@@ -235,6 +232,25 @@ public class FutureMarkets extends ChaincodeBase {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+
+        // immediate match
+        if (!isMarket && !update) {
+            int[] new_order = new int[] {orderID, traderID, price, volume};
+            ArrayList<int[]> orders = queryTable(stub, orderBook);
+            for (int [] order : orders) {
+                if (price == order[2] && volume * order[3] < 0 && traderID != order[1]){
+                    if (volume > 0){
+                        transaction(stub, new_order, order);
+                    } else {
+                        transaction(stub, order, new_order);
+                    }
+
+                }
+            }
+        } else if (isMarket && !update){
+            int[] new_order = new int[] {orderID, traderID, volume};
+            matchMarketOrder(stub, new_order);
         }
     }
 
@@ -404,7 +420,7 @@ public class FutureMarkets extends ChaincodeBase {
                     for (int j = 1; j < row.length; j++) {
                         TableProto.Column udateCol =
                                 TableProto.Column.newBuilder()
-                                        .setInt32(firstRow[j]).build();
+                                        .setInt32(row[j]).build();
                         updateCols.add(udateCol);
                     }
 
@@ -581,28 +597,26 @@ public class FutureMarkets extends ChaincodeBase {
         return (id - 2);
     }
 
-    public void matchMarketOrders(ChaincodeStub stub) {
-        ArrayList<int[]> orders = queryTable(stub, marketOrders);
-
-        for (int[] order : orders) {
-            if (order[order.length - 1] > 0) {
-                // bying
-                log.info("Bying stuff");
-                int[] sellOrder = findBestPrice(stub, false);
-                log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order), Arrays.toString(sellOrder)));
-                transaction(stub, order, sellOrder);
-            } else {
-                int[] buyOrder = findBestPrice(stub, true);
-                log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order), Arrays.toString(buyOrder)));
-                transaction(stub, buyOrder, order);
-            }
+    // TODO: implement recursion for a market order,
+    // i.e. perform transaction while volume of the market order is > 0
+    public void matchMarketOrder(ChaincodeStub stub, int[] order) {
+        if (order[order.length - 1] > 0) {
+            // bying
+            log.info("Bying stuff");
+            int[] sellOrder = findBestPrice(stub, false);
+            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order), Arrays.toString(sellOrder)));
+            transaction(stub, order, sellOrder);
+        } else {
+            int[] buyOrder = findBestPrice(stub, true);
+            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order), Arrays.toString(buyOrder)));
+            transaction(stub, buyOrder, order);
         }
-
-
     }
 
-    // how the price is set for regular orders?
     public void transaction(ChaincodeStub stub, int[] orderBuy, int[] orderSell) {
+        log.info(String.format("Matching orders:\n%1$s\n%2$s", Arrays.toString(orderBuy), Arrays.toString(orderSell)));
+
+
         int[] buyer = getTrader(stub, orderBuy[1]);
         int[] seller = getTrader(stub, orderSell[1]);
 
@@ -615,6 +629,9 @@ public class FutureMarkets extends ChaincodeBase {
         int requestedVolume = 0;
         int volumeForSale = 0;
 
+        boolean isSellingOrderMarket = false;
+        boolean isMarket = false;
+
         //set price based on market / regular order
         int price = 0;
         if (orderBuy.length == 3) {
@@ -622,11 +639,16 @@ public class FutureMarkets extends ChaincodeBase {
             price = orderSell[2];
             requestedVolume = orderBuy[2];
             volumeForSale = orderSell[3];
+
+            isMarket = true;
         } else if (orderSell.length == 3) {
             // selling order is a market order
             price = orderBuy[2];
             requestedVolume = orderBuy[3];
             volumeForSale = orderSell[2];
+
+            isSellingOrderMarket = true;
+            isMarket = true;
         } else {
             price = (orderBuy[2] + orderSell[2]) / 2;
             requestedVolume = orderBuy[3];
@@ -637,7 +659,7 @@ public class FutureMarkets extends ChaincodeBase {
             log.error(String.format("One of the orders are incorrect.\nVolume for sale: %1$d\nRequested volume: %2$d",
                     volumeForSale, requestedVolume));
 
-        // buyer has enought money?
+        // buyer has enough money?
         if (buyerMoney - requestedVolume*price > 0) {
             // seller has enough volume?
             if (Math.abs(volumeForSale) - requestedVolume >= 0) {
@@ -650,13 +672,13 @@ public class FutureMarkets extends ChaincodeBase {
                 volumeForSale += requestedVolume;
                 requestedVolume = 0;
             } else {
-                requestedVolume -= Math.abs(volumeForSale);
                 sellerMoney += price*volumeForSale;
                 sellerVolume -= volumeForSale;
 
                 buyerMoney -= price*volumeForSale;
                 buyerVolume += volumeForSale;
 
+                requestedVolume -= Math.abs(volumeForSale);
                 volumeForSale = 0;
             }
 
@@ -677,6 +699,23 @@ public class FutureMarkets extends ChaincodeBase {
             postOrder(stub, buyer_order_arguments, true);
             postOrder(stub, seller_order_arguments, true);
 
+            String deletion_option = "order";
+            if (volumeForSale == 0) {
+                if (isSellingOrderMarket && isMarket)
+                    deletion_option = "market_order";
+
+                log.info(String.format("Deleting order:\n%1$s", Arrays.toString(seller_order_arguments)));
+                delete(stub, new String[]{seller_order_arguments[0], deletion_option});
+            }
+
+            if (requestedVolume == 0) {
+                if (!isSellingOrderMarket && isMarket)
+                    deletion_option = "market_order";
+
+                log.info(String.format("Deleting order:\n%1$s", Arrays.toString(buyer_order_arguments)));
+                delete(stub, new String[]{buyer_order_arguments[0], deletion_option});
+            }
+
             // updating traders
             String[] buyer_arguments = Arrays.toString(buyer).split("[\\[\\]]")[1].split(", ");
             String[] seller_arguments = Arrays.toString(seller).split("[\\[\\]]")[1].split(", ");
@@ -689,6 +728,8 @@ public class FutureMarkets extends ChaincodeBase {
 
             deposit(stub, buyer_arguments, true);
             deposit(stub, seller_arguments, true);
+
+            //buildOrderBook(stub);
         } else {
             int requiredAmount = price*requestedVolume;
             log.error(String.format("The required amount for this transaction is %1$d", requiredAmount));
