@@ -19,7 +19,7 @@ public class FutureMarkets extends ChaincodeBase {
 
 
     private static Log log = LogFactory.getLog(FutureMarkets.class);
-    private HelperMethods helper = new HelperMethods();
+    private HelperMethods helper = new HelperMethods(100, 150);
 
 
     @java.lang.Override
@@ -38,6 +38,12 @@ public class FutureMarkets extends ChaincodeBase {
         }
 
         switch (function) {
+            case "dummy":
+                int netValue = helper.netValue(stub, args_i[0]);
+
+                log.info("net value = " + String.valueOf(netValue));
+
+                break;
             case "init":
                 init(stub);
                 break;
@@ -126,7 +132,7 @@ public class FutureMarkets extends ChaincodeBase {
             e.printStackTrace();
         }
     }
-    
+
     // TODO price and volume cannot be zero
     private void postOrder(ChaincodeStub stub, int[] args, boolean update) {
         String tableName = "";
@@ -268,7 +274,7 @@ public class FutureMarkets extends ChaincodeBase {
 
         for (int i = 1; i <= 5; i++)
         {
-            deposit(stub, new int[]{1000, 100}, false);
+            deposit(stub, new int[]{1000, 0}, false);
         }
     }
 
@@ -472,14 +478,6 @@ public class FutureMarkets extends ChaincodeBase {
                 buyerMoney -= requestedVolume*price;
 
                 volumeForSale += requestedVolume;
-
-                log.info("price = " + price);
-                log.info("sellerVolume = " + sellerVolume);
-                log.info("buyerVolume = " + buyerVolume);
-                log.info("buyerMoney = " + buyerMoney);
-                log.info("volumeForSale = " + volumeForSale);
-                log.info("requestedVolume = " + requestedVolume);
-
                 requestedVolume = 0;
             } else {
                 sellerMoney += price*volumeForSale;
@@ -489,14 +487,6 @@ public class FutureMarkets extends ChaincodeBase {
                 buyerVolume += volumeForSale;
 
                 requestedVolume -= Math.abs(volumeForSale);
-
-                log.info("price = " + price);
-                log.info("sellerVolume = " + sellerVolume);
-                log.info("buyerVolume = " + buyerVolume);
-                log.info("buyerMoney = " + buyerMoney);
-                log.info("volumeForSale = " + volumeForSale);
-                log.info("requestedVolume = " + requestedVolume);
-
                 volumeForSale = 0;
             }
 

@@ -18,9 +18,12 @@ public class HelperMethods {
     public static final String marketOrders = "MarketOrders";
     private static Log log = LogFactory.getLog(HelperMethods.class);
 
-    public String testmethod(ChaincodeStub stub, String input) {
-        log.info("running the test method " + input);
-        return input;
+    private int maxPrice;
+    private int maxVolume;
+
+    public HelperMethods(int maxPrice, int maxVolume) {
+        this.maxPrice = maxPrice;
+        this.maxVolume = maxVolume;
     }
 
     /*
@@ -262,11 +265,120 @@ public class HelperMethods {
 
     public int netValue(ChaincodeStub stub, int traderID) {
         int netValue = 0;
+        // get trader's cash
+        int cash = getTrader(stub, traderID)[1];
+        int volume = getTrader(stub, traderID)[2];
 
-
-
-
+        netValue = cash - cotoliq(stub, volume);
         return netValue;
+    }
+
+    private int cotoliq(ChaincodeStub stub, int volume) {
+        int result = 0;
+
+        ArrayList<int[]> pricesVolumes = new ArrayList<>();
+
+        if (volume > 0) {
+            pricesVolumes = getPricesVolumes(stub, true);
+
+            int sumVolumes = 0;
+            for (int[] priceVolumeTuple : pricesVolumes) {
+                sumVolumes += priceVolumeTuple[1];
+            }
+
+            if (sumVolumes == 0) {
+                result = -volume;
+            } else if (Math.abs(sumVolumes) - volume >= 0) {
+                for (int[] priceVolumeTuple : pricesVolumes) {
+                    if (priceVolumeTuple[1] + volume <= 0) {
+                        result -= priceVolumeTuple[0] * volume;
+                        break;
+                    } else {
+                        result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
+
+                        volume += priceVolumeTuple[1];
+                    }
+                }
+            } else {
+                for (int[] priceVolumeTuple : pricesVolumes) {
+                    result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
+                    volume += priceVolumeTuple[1];
+                }
+
+                result -= volume;
+            }
+        } else {
+            pricesVolumes = getPricesVolumes(stub, false);
+
+            int sumVolumes = 0;
+            for (int[] priceVolumeTuple : pricesVolumes) {
+                sumVolumes += priceVolumeTuple[1];
+            }
+
+            if (sumVolumes == 0) {
+                result = Math.abs(volume) * this.maxPrice;
+            } else if (sumVolumes - Math.abs(volume) >= 0) {
+                for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
+                    int priceOB = pricesVolumes.get(i)[0];
+                    int volumeOB = pricesVolumes.get(i)[1];
+                    if (volumeOB + volume >= 0) {
+                        result += priceOB * Math.abs(volume);
+                        break;
+                    } else {
+                        result += volumeOB * priceOB;
+
+                        volume += volumeOB;
+                    }
+                }
+            } else {
+                for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
+                    int priceOB = pricesVolumes.get(i)[0];
+                    int volumeOB = pricesVolumes.get(i)[1];
+
+                    result += volumeOB * priceOB;
+                    volume += volumeOB;
+                }
+
+                result += Math.abs(volume) * this.maxPrice;
+            }
+        }
+
+        return result;
+    }
+
+    /*
+    isSale = true => get negative prices-volumes
+    isSale = false => get positive prices-volumes
+     */
+    private ArrayList<int[]> getPricesVolumes(ChaincodeStub stub, boolean isSale) {
+        ArrayList<int[]> result = new ArrayList<int[]>();
+
+        ArrayList<int[]> orderBookRows = queryTable(stub, orderBook);
+
+        for (int i = 0; i < orderBookRows.size(); i++) {
+            int[] valueToAdd = new int[2];
+
+            int price = orderBookRows.get(i)[2];
+            int volume = orderBookRows.get(i)[3];
+
+            if (isSale) {
+                if (volume < 0) {
+                    valueToAdd[0] = price;
+                    valueToAdd[1] = volume;
+
+                    result.add(valueToAdd);
+                }
+            } else {
+                if (volume > 0) {
+                    valueToAdd[0] = price;
+                    valueToAdd[1] = volume;
+
+                    result.add(valueToAdd);
+                }
+            }
+        }
+
+        return result;
     }
 
 }
