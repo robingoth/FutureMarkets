@@ -12,20 +12,20 @@ import java.util.List;
 import java.util.*;
 import java.lang.Math;
 
-import FutureMarkets.HelperMethods;
-
 // TODO all args should be int, not string
 public class FutureMarkets extends ChaincodeBase {
 
-
     private static Log log = LogFactory.getLog(FutureMarkets.class);
+
+    // setting maximum price and volume
     private HelperMethods helper = new HelperMethods(100, 150);
 
 
     @java.lang.Override
     public String run(ChaincodeStub stub, String function, String[] args) {
-        log.info("In run, function:"+function);
+        log.info("In run, function:" + function);
 
+        // convert all arguments from string to int
         int[] args_i = new int[args.length];
         for (int i = 0; i < args.length; i++) {
             try {
@@ -33,15 +33,13 @@ public class FutureMarkets extends ChaincodeBase {
                 //log.info(String.format("%1$s -> %2$d", args[i], args_i[i]));
             } catch (NumberFormatException e){
                 log.error(String.format("Illegal argument %1$s. Exception message %2$s", args[i], e.getMessage()));
-                System.exit(0);
+                return null;
             }
         }
 
         switch (function) {
             case "dummy":
-                int netValue = helper.netValue(stub, args_i[0]);
-
-                log.info("net value = " + String.valueOf(netValue));
+                settleMargin(stub);
 
                 break;
             case "init":
@@ -50,14 +48,42 @@ public class FutureMarkets extends ChaincodeBase {
             case "post_order":
                 // args = traderID, price, volume
                 // or traderID, volume
+                boolean isRoundValid = helper.validateData(stub);
+
+                if (!isRoundValid){
+                    log.error("Current round is invalid. Check the data");
+                    return null;
+                }
+
                 postOrder(stub, args_i, false);
                 buildOrderBook(stub);
+
+                boolean success = settleMargin(stub);
+
+                if (!success) {
+                    log.error("Time for Mark To Market");
+                    markToMarket(stub);
+                }
+
                 break;
             case "update_order":
                 // args = orderID, traderID, price, volume
                 // or orderID, traderID, volume
                 postOrder(stub, args_i, true);
                 buildOrderBook(stub);
+                break;
+            case "cancel_order":
+                // args = orderID
+                cancelLimitOrder(stub, args_i[0]);
+                buildOrderBook(stub);
+
+                success = settleMargin(stub);
+
+                if (!success) {
+                    log.error("Time for Mark To Market");
+                    markToMarket(stub);
+                }
+
                 break;
             case "add_trader":
                 deposit(stub, args_i, false);
@@ -90,7 +116,7 @@ public class FutureMarkets extends ChaincodeBase {
             money_amount = args[1];
             volume = args[2];
         } else {
-            fieldID = helper.getTableSize(stub, helper.userTable) + 1;
+            fieldID = helper.getTableSize(stub, HelperMethods.userTable) + 1;
             money_amount = args[0];
             volume = args[1];
         }
@@ -133,8 +159,9 @@ public class FutureMarkets extends ChaincodeBase {
         }
     }
 
-    // TODO price and volume cannot be zero
-    private void postOrder(ChaincodeStub stub, int[] args, boolean update) {
+    private String postOrder(ChaincodeStub stub, int[] args, boolean update) {
+        //log.info("PostOrder\n\n\n\n\n\n\n\n\n");
+
         String tableName = "";
 
         int orderID = 0;
@@ -146,13 +173,25 @@ public class FutureMarkets extends ChaincodeBase {
 
         boolean isMarket = false;
 
-        log.info("Number of arguments = " + args.length);
+        //log.info("Number of arguments = " + args.length);
         if ((args.length == 3 && update) || (args.length == 2 && !update)) {
             log.info("Type of order = Market");
             isMarket = true;
         }
 
-        if (!isMarket) {
+        if (isMarket) {
+            tableName = HelperMethods.marketOrders;
+
+            if (update) {
+                orderID = args[0];
+                traderID = args[1];
+                volume = args[2];
+            } else {
+                orderID = helper.getTableSize(stub, tableName) + 1;
+                traderID = args[0];
+                volume = args[1];
+            }
+        } else {
             tableName = HelperMethods.orderBook;
 
             if (update) {
@@ -166,7 +205,67 @@ public class FutureMarkets extends ChaincodeBase {
                 price = args[1];
                 volume = args[2];
             }
+        }
 
+        int remainder = 0;
+        // validation,
+        // immediate match
+        if (!isMarket && !update) {
+            //validation
+            int[] new_order = new int[]{orderID, traderID, price, volume};
+            boolean isOrderValid = helper.validateOrder(stub, new_order);
+
+            if (!isOrderValid) {
+                log.error(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
+                return null;
+            }
+
+            do {
+                //log.info("\nQuerying orders\n");
+                ArrayList<int[]> orders = helper.queryTable(stub, HelperMethods.orderBook);
+
+                int i = 0;
+                for (i = 0; i < orders.size(); i++) {
+                    //log.info(String.format("\ni = %1$d\n", i));
+                    int[] order = orders.get(i);
+                    new_order = new int[]{orderID, traderID, price, volume};
+
+                    if (price == order[2] && volume * order[3] < 0 && traderID != order[1]) {
+                        //log.info("\ntransaction\n");
+                        remainder = transaction(stub, new_order, order);
+                        //log.info(String.format("\nremainder = %1$d\n", remainder));
+                        volume = remainder;
+                        break;
+                    }
+                }
+
+                orderID = helper.getTableSize(stub, tableName) + 1;
+                //log.info(String.format("\norder id = %1$d\n", orderID));
+
+                //log.info(String.format("\ni = %1$d\nsize = %2$d\n", i, orders.size()));
+                if (i == orders.size())
+                    break;
+            } while (remainder != 0);
+
+            if (volume == 0) {
+                log.info("Order was totally fulfilled, therefore not posted");
+                return null;
+            }
+        } else if (isMarket && !update) {
+            int[] new_order = new int[]{orderID, traderID, volume};
+            int[] matchRes = matchMarketOrder(stub, new_order);
+
+            remainder = matchRes[0];
+            int numOfTransactions = matchRes[1];
+
+            if (remainder == 0 && numOfTransactions != 0) {
+                log.info("Order was totally fulfilled, therefore not posted");
+                return null;
+            } else if (remainder == 0 && numOfTransactions == 0)
+                remainder = volume;
+        }
+
+        if (!isMarket) {
             TableProto.Column col1 =
                     TableProto.Column.newBuilder()
                             .setUint32(orderID).build();
@@ -176,6 +275,12 @@ public class FutureMarkets extends ChaincodeBase {
             TableProto.Column col3 =
                     TableProto.Column.newBuilder()
                             .setInt32(price).build();
+
+
+            if (remainder != 0) {
+                volume = remainder;
+            }
+
             TableProto.Column col4 =
                     TableProto.Column.newBuilder()
                             .setInt32(volume).build();
@@ -185,24 +290,17 @@ public class FutureMarkets extends ChaincodeBase {
             cols.add(col3);
             cols.add(col4);
         } else {
-            tableName = HelperMethods.marketOrders;
-
-            if (update) {
-                orderID = args[0];
-                traderID = args[1];
-                volume = args[2];
-            } else {
-                orderID = helper.getTableSize(stub, tableName) + 1;
-                traderID = args[0];
-                volume = args[1];
-            }
-
             TableProto.Column col1 =
                     TableProto.Column.newBuilder()
                             .setUint32(orderID).build();
             TableProto.Column col2 =
                     TableProto.Column.newBuilder()
                             .setInt32(traderID).build();
+
+            if (remainder != 0) {
+                volume = remainder;
+            }
+
             TableProto.Column col3 =
                     TableProto.Column.newBuilder()
                             .setInt32(volume).build();
@@ -220,37 +318,16 @@ public class FutureMarkets extends ChaincodeBase {
             if (update) {
                 success = stub.replaceRow(tableName, row);
             } else {
-                log.info(String.format("Adding order %1$d for trader %2$d",
-                        orderID, traderID));
                 success = stub.insertRow(tableName, row);
-            }
-
-            if (success) {
-                log.info("Row successfully inserted");
+                if (success) {
+                    log.info(String.format("Adding order %1$d for trader %2$d",
+                            orderID, traderID));
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
-        // immediate match
-        if (!isMarket && !update) {
-            int[] new_order = new int[]{orderID, traderID, price, volume};
-            ArrayList<int[]> orders = helper.queryTable(stub, HelperMethods.orderBook);
-            for (int[] order : orders) {
-                if (price == order[2] && volume * order[3] < 0 && traderID != order[1]) {
-                    if (volume > 0) {
-                        transaction(stub, new_order, order);
-                    } else {
-                        transaction(stub, order, new_order);
-                    }
-
-                }
-            }
-        } else if (isMarket && !update) {
-            int[] new_order = new int[]{orderID, traderID, volume};
-            matchMarketOrder(stub, new_order);
-        }
+        return "";
     }
 
     private void init(ChaincodeStub stub) {
@@ -281,7 +358,7 @@ public class FutureMarkets extends ChaincodeBase {
     /*
     options:
     -1 - trader
-    0 - order
+    0 - limit order
     1 - market order
      */
     private boolean delete(ChaincodeStub stub, int[] args){
@@ -406,142 +483,126 @@ public class FutureMarkets extends ChaincodeBase {
         return result;
     }
 
-    // TODO: implement recursion for a market order,
-    // i.e. perform transaction while volume of the market order is > 0
-    public void matchMarketOrder(ChaincodeStub stub, int[] order) {
-        if (order[order.length - 1] > 0) {
-            // bying
-            log.info("Bying stuff");
-            int[] sellOrder = helper.findBestPrice(stub, false);
-            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order), Arrays.toString(sellOrder)));
-            transaction(stub, order, sellOrder);
-        } else {
-            int[] buyOrder = helper.findBestPrice(stub, true);
-            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(buyOrder), Arrays.toString(order)));
-            transaction(stub, buyOrder, order);
-        }
+    private boolean cancelLimitOrder(ChaincodeStub stub, int orderID) {
+        boolean isPermitted = helper.isCancelPermitted(stub, orderID);
+
+        if (!isPermitted)
+            return false;
+
+        return delete(stub, new int[]{orderID, 0});
+
     }
 
-    public void transaction(ChaincodeStub stub, int[] orderBuy, int[] orderSell) {
-        log.info(String.format("Matching orders:\n%1$s\n%2$s", Arrays.toString(orderBuy), Arrays.toString(orderSell)));
+    private int[] matchMarketOrder(ChaincodeStub stub, int[] order) {
+        int remainder = 0;
+        int numOfTransactions = 0;
+        int[] result = new int[]{remainder, numOfTransactions};
 
-        int[] buyer = helper.getTrader(stub, orderBuy[1]);
-        int[] seller = helper.getTrader(stub, orderSell[1]);
+        boolean isBuy;
 
-        int buyerMoney = buyer[1];
-        int sellerMoney = seller[1];
+        if (order[2] > 0)
+            isBuy = false;
+        else
+            isBuy = true;
 
-        int buyerVolume = buyer[2];
-        int sellerVolume = seller[2];
+        do {
+            int[] bestPriceOrder = helper.findBestPriceOrder(stub, isBuy, order[1]);
+            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order),
+                    Arrays.toString(bestPriceOrder)));
 
-        int requestedVolume = 0;
-        int volumeForSale = 0;
+            if (bestPriceOrder[0] == -1) {
+                result[0] = remainder;
+                result[1] = numOfTransactions;
+                return result;
+            } else if (bestPriceOrder[0] != 0) {
+                remainder = transaction(stub, order, bestPriceOrder);
+                order[2] = remainder;
+                numOfTransactions++;
 
-        boolean isSellingOrderMarket = false;
-        boolean isMarket = false;
-
-        //set price based on market / regular order
-        int price = 0;
-        if (orderBuy.length == 3) {
-            // buying order is a market order
-            price = orderSell[2];
-            requestedVolume = Math.abs(orderBuy[2]);
-            volumeForSale = Math.abs(orderSell[3]);
-
-            isMarket = true;
-        } else if (orderSell.length == 3) {
-            // selling order is a market order
-            price = orderBuy[2];
-            requestedVolume = Math.abs(orderBuy[3]);
-            volumeForSale = Math.abs(orderSell[2]);
-
-            isSellingOrderMarket = true;
-            isMarket = true;
-        } else {
-            price = (orderBuy[2] + orderSell[2]) / 2;
-            requestedVolume = Math.abs(orderBuy[3]);
-            volumeForSale = Math.abs(orderSell[3]);
-        }
-
-        if (requestedVolume < 0 || volumeForSale > 0)
-            log.error(String.format("One of the orders are incorrect.\nVolume for sale: %1$d\nRequested volume: %2$d",
-                    volumeForSale, requestedVolume));
-
-        // buyer has enough money?
-        if (buyerMoney - requestedVolume*price > 0) {
-            // seller has enough volume?
-            if (Math.abs(volumeForSale) - requestedVolume >= 0) {
-                sellerVolume -= requestedVolume;
-                sellerMoney += requestedVolume*price;
-
-                buyerVolume += requestedVolume;
-                buyerMoney -= requestedVolume*price;
-
-                volumeForSale += requestedVolume;
-                requestedVolume = 0;
+                result[0] = remainder;
             } else {
-                sellerMoney += price*volumeForSale;
-                sellerVolume -= volumeForSale;
-
-                buyerMoney -= price*volumeForSale;
-                buyerVolume += volumeForSale;
-
-                requestedVolume -= Math.abs(volumeForSale);
-                volumeForSale = 0;
+                break;
             }
+        } while (remainder != 0);
 
-            // updating orders
-            orderBuy[1] = buyer[0];
-            orderBuy[orderBuy.length - 1] = requestedVolume;
-
-            orderSell[1] = seller[0];
-            orderSell[orderSell.length - 1] = volumeForSale;
-
-            log.info(String.format("Updating orders:\n%1$s\n%2$s", Arrays.toString(orderBuy), Arrays.toString(orderSell)));
-
-            postOrder(stub, orderBuy, true);
-            postOrder(stub, orderSell, true);
-
-            //delete sell order
-            int deletion_option = 0;
-            if (volumeForSale == 0) {
-                if (isSellingOrderMarket && isMarket)
-                    deletion_option = 1; // market order
-
-                log.info(String.format("Deleting order:\n%1$s", Arrays.toString(orderSell)));
-                delete(stub, new int[]{orderSell[0], deletion_option});
-            }
-
-            //delete buy order
-            deletion_option = 0;
-            if (requestedVolume == 0) {
-                if (!isSellingOrderMarket && isMarket)
-                    deletion_option = 1; //market order
-
-                log.info(String.format("Deleting order:\n%1$s", Arrays.toString(orderBuy)));
-                delete(stub, new int[]{orderBuy[0], deletion_option});
-            }
-
-            // updating traders
-            buyer[1] = buyerMoney;
-            buyer[2] = buyerVolume;
-            log.info(String.format("Updating trader who bought:\n%1$s", Arrays.toString(buyer)));
-
-            seller[1] = sellerMoney;
-            seller[2] = sellerVolume;
-            log.info(String.format("Updating trader who sold:\n%1$s", Arrays.toString(seller)));
-
-            deposit(stub, buyer, true);
-            deposit(stub, seller, true);
-
-            //buildOrderBook(stub);
-        } else {
-            int requiredAmount = price*requestedVolume;
-            log.error(String.format("The required amount for this transaction is %1$d", requiredAmount));
-        }
+        return result;
     }
 
-    // TODO check behavior when two prices are same
+    private int transaction(ChaincodeStub stub, int[] newOrder, int[] existingOrder) {
+        int traderID = newOrder[1];
+        int matchedTraderID = existingOrder[1];
+
+        int[] trader = helper.getTrader(stub, newOrder[1]);
+        int[] matchedTrader = helper.getTrader(stub, existingOrder[1]);
+
+        int traderMoney = trader[1];
+        int matchedTraderMoney = matchedTrader[1];
+
+        int traderVolume = trader[2];
+        int matchedTraderVolume = matchedTrader[2];
+
+        int price = existingOrder[2];
+
+        int volume = newOrder[newOrder.length - 1];
+        int existingOrderVolume = existingOrder[3];
+        int matchedVolume = Math.min(Math.abs(volume), Math.abs(existingOrderVolume));
+
+        if (volume > 0) {
+            traderMoney -= price * matchedVolume;
+            traderVolume += matchedVolume;
+
+            matchedTraderMoney += price * matchedVolume;
+            matchedTraderVolume -= matchedVolume;
+
+            volume -= matchedVolume;
+            existingOrderVolume += matchedVolume;
+        } else {
+            traderMoney += price * matchedVolume;
+            traderVolume -= matchedVolume;
+
+            matchedTraderMoney -= price * matchedVolume;
+            matchedTraderVolume += matchedVolume;
+
+            volume += matchedVolume;
+            existingOrderVolume -= matchedVolume;
+        }
+
+        if (existingOrderVolume == 0) {
+            delete(stub, new int[]{existingOrder[0], 0});
+        }
+        else {
+            existingOrder[existingOrder.length - 1] = existingOrderVolume;
+            postOrder(stub, existingOrder, true);
+        }
+
+        /*
+        if (volume == 0) {
+            if (newOrder.length == 3)
+                delete(stub, new int[]{newOrder[0], 1});
+            else if (newOrder.length == 4)
+                delete(stub, new int[]{newOrder[0], 0});
+        } else {
+            newOrder[newOrder.length - 1] = volume;
+            postOrder(stub, newOrder, true);
+        }
+        */
+
+        // updating traders
+        trader[1] = traderMoney;
+        trader[2] = traderVolume;
+        log.info(String.format("Updating trader who posted order:\n%1$s", Arrays.toString(trader)));
+
+        deposit(stub, trader, true);
+
+        matchedTrader[1] = matchedTraderMoney;
+        matchedTrader[2] = matchedTraderVolume;
+        log.info(String.format("Updating trader who got matched:\n%1$s", Arrays.toString(matchedTrader)));
+
+        deposit(stub, matchedTrader, true);
+
+        return volume;
+    }
+
     private void buildOrderBook(ChaincodeStub stub) {
         ArrayList<int[]> rows = helper.queryTable(stub, HelperMethods.orderBook);
 
@@ -590,7 +651,66 @@ public class FutureMarkets extends ChaincodeBase {
         }
     }
 
+    public boolean settleMargin (ChaincodeStub stub) {
+        ArrayList<int[]> traders = helper.queryTable(stub, HelperMethods.userTable);
+        ArrayList<int[]> brokeTraders = new ArrayList<>();
 
+        for (int[] trader : traders) {
+            int netValue = helper.netValue(stub, trader[0]);
+
+            if (netValue < 0)
+                brokeTraders.add(trader);
+        }
+
+        if (brokeTraders.size() == 0) {
+            log.info("No traders are broke");
+            return true;
+        }
+
+
+        boolean canSupply = true;
+        for (int[] brokeTrader : brokeTraders) {
+            ArrayList<int[]> traderOrders = helper.getTraderOrders(stub, brokeTrader[0]);
+            int traderVolume = brokeTrader[2];
+
+            for (int i = traderOrders.size() - 1; i >= 0; i--) {
+                delete(stub, new int[]{traderOrders.get(i)[0], 0});
+            }
+
+            int totalSellVolume = Math.abs(helper.getTotalSellVolume(stub));
+            int totalBuyVolume = helper.getTotalBuyVolume(stub);
+
+            log.info(String.format("Trader volume = %1$d", traderVolume));
+            log.info(String.format("Total buy volume = %1$d", totalBuyVolume));
+            log.info(String.format("Total sell volume = %1$d", totalSellVolume));
+
+            if ((traderVolume < 0 && Math.abs(traderVolume) > totalSellVolume) || (traderVolume > 0 && traderVolume > totalBuyVolume)) {
+                log.error("Market cannot supply the margin settlement for all traders");
+                canSupply = false;
+                break;
+            }
+
+            if (traderVolume != 0)
+                postOrder(stub, new int[]{brokeTrader[0], -1 * brokeTrader[2]}, false);
+
+            delete(stub, new int[]{brokeTrader[0], -1});
+        }
+
+        return canSupply;
+    }
+
+    private void markToMarket (ChaincodeStub stub) {
+        ArrayList<int[]> traders = helper.queryTable(stub, HelperMethods.userTable);
+        int midPrice = helper.findMidPrice(stub);
+
+        for (int[] trader: traders) {
+            int traderVolume = trader[2];
+            int traderMoney = trader[1];
+
+            traderMoney += traderVolume * midPrice;
+            deposit(stub, new int[]{trader[0], traderMoney, 0}, true);
+        }
+    }
 
     @java.lang.Override
     public String query(ChaincodeStub stub, String function, String[] args) {

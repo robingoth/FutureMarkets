@@ -2,14 +2,11 @@ package FutureMarkets;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hyperledger.java.shim.ChaincodeBase;
 import org.hyperledger.java.shim.ChaincodeStub;
 import org.hyperledger.protos.Chaincode;
 import org.hyperledger.protos.TableProto;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
 
 public class HelperMethods {
@@ -18,8 +15,8 @@ public class HelperMethods {
     public static final String marketOrders = "MarketOrders";
     private static Log log = LogFactory.getLog(HelperMethods.class);
 
-    private int maxPrice;
-    private int maxVolume;
+    public int maxPrice;
+    public int maxVolume;
 
     public HelperMethods(int maxPrice, int maxVolume) {
         this.maxPrice = maxPrice;
@@ -113,7 +110,7 @@ public class HelperMethods {
     }
 
     public int getTableSize(ChaincodeStub stub, String tableName) {
-        log.info(String.format("Attempting to get the size of table %1$s", tableName));
+        //log.info(String.format("Attempting to get the size of table %1$s", tableName));
 
         String queryRes = "";
         int id = 1;
@@ -138,29 +135,6 @@ public class HelperMethods {
             id++;
         }while (queryRes != "No record found !");
         return (id - 2);
-    }
-
-    public ArrayList<int[]> sortTable(ChaincodeStub stub, String[] args) {
-        String tableName = args[0];
-        final int orderBy = Integer.parseInt(args[1]);
-
-        // query rows
-        ArrayList<int[]> rows = queryTable(stub, tableName);
-
-
-        // sort the rows
-        Collections.sort(rows, new Comparator<int[]>() {
-            public int compare(int[] a, int[] b) {
-                return a[orderBy] - b[orderBy];
-            }
-        });
-
-        return rows;
-        /*
-        for (int[] ints : rows) {
-            log.info(Arrays.toString(ints));
-        }
-        */
     }
 
     public int[] getTrader(ChaincodeStub stub, int id) {
@@ -189,23 +163,30 @@ public class HelperMethods {
     }
 
     /*
-    is_best_buy : 1 - buy
-                  0 - sell
+    is_best_buy : 1 - find best buying price
+                  0 - find best selling price
      */
-    public int[] findBestPrice(ChaincodeStub stub, boolean is_best_buy) {
-        log.debug("entering findBestPrice");
+    public int findBestPrice(ChaincodeStub stub, boolean is_best_buy) {
+        log.debug("entering findBestPriceOrder");
 
         ArrayList<int[]> rows = queryTable(stub, orderBook);
-        int[] bestPrice = new int[4];
+        int bestPrice = 0;
+
+        if (rows.size() == 0) {
+            if (is_best_buy)
+                return  1;
+            else
+                return this.maxPrice;
+        }
 
         if (is_best_buy)
         {
-            // if 1st data entry is negative, no one is bying
+            // if 1st data entry is negative, no one is buying
             if (rows.get(0)[3] < 0)
             {
                 log.debug("value of first entry is " + String.valueOf(rows.get(0)[3]));
-                log.error("no traders are bying");
-                return null;
+                log.error("no traders are buying");
+                return 1;
             }
 
             // if last entry is positive, no one is selling, so take the best price from the last row
@@ -213,7 +194,7 @@ public class HelperMethods {
             {
                 log.debug("size is" + String.valueOf(rows.size()));
                 log.debug("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
-                bestPrice = rows.get(rows.size() - 1);
+                bestPrice = rows.get(rows.size() - 1)[2];
             }
             else
             {
@@ -224,7 +205,7 @@ public class HelperMethods {
 
                     if (cur[3] > 0 && next[3] < 0)
                     {
-                        bestPrice = cur;
+                        bestPrice = cur[2];
                         break;
                     }
                 }
@@ -237,13 +218,13 @@ public class HelperMethods {
             if (rows.get(rows.size() - 1)[3] > 0)
             {
                 log.error("no traders are selling");
-                return null;
+                return this.maxPrice;
             }
 
             // if fist entry is negative, no one is bying, so take the best price from the first row
             if (rows.get(0)[3] < 0)
             {
-                bestPrice = rows.get(0);
+                bestPrice = rows.get(0)[2];
             }
             else
             {
@@ -254,6 +235,100 @@ public class HelperMethods {
 
                     if (cur[3] < 0 && next[3] > 0)
                     {
+                        bestPrice = cur[2];
+                        break;
+                    }
+                }
+            }
+        }
+        return bestPrice;
+    }
+
+    public int findMidPrice (ChaincodeStub stub) {
+        int result = 0;
+
+        int bestBuyPrice = findBestPrice(stub, true);
+        int bestSellPrice = findBestPrice(stub, false);
+
+        result = (bestBuyPrice + bestSellPrice) / 2;
+
+        return result;
+    }
+
+    //same as above, but does not consider orders with trader id specified
+    public int[] findBestPriceOrder(ChaincodeStub stub, boolean is_best_buy, int traderID) {
+        log.debug("entering findBestPriceOrder");
+
+        ArrayList<int[]> rows = queryTable(stub, orderBook);
+        ArrayList<int[]> orders = new ArrayList<>();
+        int[] bestPrice = new int[4];
+
+        if (rows.size() == 0) {
+            return new int[]{0, 0, 0, 0};
+        }
+
+        for (int[] row : rows) {
+            if (row[1] != traderID)
+                orders.add(row);
+        }
+
+        if (is_best_buy)
+        {
+            // if 1st data entry is negative, no one is buying
+            if (orders.get(0)[3] < 0)
+            {
+                log.debug("value of first entry is " + String.valueOf(orders.get(0)[3]));
+                log.error("no traders are buying");
+                return new int[]{-1, 0, 0, 0};
+            }
+
+            // if last entry is positive, no one is selling, so take the best price from the last row
+            if (orders.get(orders.size() - 1)[3] > 0)
+            {
+                log.debug("size is" + String.valueOf(orders.size()));
+                log.debug("value of last entry is " + String.valueOf(orders.get(orders.size() - 1)[3]));
+
+                for (int i = orders.size() - 1; i >= 0; i--) {
+                    int[] order = orders.get(i);
+                    if (order[1] != traderID) {
+                        bestPrice = orders.get(i);
+                        break;
+                    }
+                }
+            } else {
+                for (int i = 0; i < orders.size(); i++) {
+                    int[] cur = orders.get(i);
+                    int[] next = orders.get(i + 1);
+
+                    if (cur[3] > 0 && next[3] < 0) {
+                        bestPrice = cur;
+                        break;
+                    }
+                }
+            }
+
+        } else {
+            // if last data entry is positive, no one is selling
+            if (orders.get(orders.size() - 1)[3] > 0) {
+                log.error("no traders are selling");
+                return new int[]{-1, 0, 0, 0};
+            }
+
+            // if fist entry is negative, no one is buying, so take the best price from the first row
+            if (orders.get(0)[3] < 0) {
+                for (int i = 0; i < orders.size(); i++) {
+                    int[] order = orders.get(i);
+                    if (order[1] != traderID) {
+                        bestPrice = orders.get(i);
+                        break;
+                    }
+                }
+            } else {
+                for (int i = orders.size() - 1; i > 0; i--) {
+                    int[] cur = orders.get(i);
+                    int[] next = orders.get(i - 1);
+
+                    if (cur[3] < 0 && next[3] > 0) {
                         bestPrice = cur;
                         break;
                     }
@@ -263,17 +338,231 @@ public class HelperMethods {
         return bestPrice;
     }
 
+    public boolean doBuyingOrdersExist(ChaincodeStub stub) {
+        ArrayList<int[]> rows = queryTable(stub, orderBook);
+
+        if (rows.size() == 0)
+            return false;
+
+        // if 1st data entry is negative, no one is bying
+        if (rows.get(0)[3] < 0) {
+            log.debug("value of first entry is " + String.valueOf(rows.get(0)[3]));
+            log.error("no traders are bying");
+            return false;
+        } else
+            return true;
+    }
+
+    public boolean doSellingOrdersExist(ChaincodeStub stub) {
+        ArrayList<int[]> rows = queryTable(stub, orderBook);
+
+        if (rows.size() == 0)
+            return false;
+
+        // if last data entry is positive, no one is selling
+        if (rows.get(rows.size() - 1)[3] > 0) {
+            log.error("no traders are selling");
+            return false;
+        } else
+            return true;
+    }
+
+    public boolean validateOrder(ChaincodeStub stub, int[] order) {
+        int traderID = order[1];
+        int price = order[2];
+        int volume = order[3];
+
+        if (price < 1 && price > maxPrice) {
+            log.error(String.format("Price of this order is not in allowed boundaries [1, %1$d]", maxPrice));
+        }
+
+        // check if the price is valid
+        if (volume > 0) {
+            if (doSellingOrdersExist(stub)) {
+                int bestSellingPrice = findBestPrice(stub, false);
+
+                if (price > bestSellingPrice) {
+                    log.error(String.format("Order's price is higher than current best selling price.\n" +
+                            "Best selling price = %1$d", bestSellingPrice));
+                    return false;
+                }
+            } else {
+                if (price > this.maxPrice) {
+                    log.error(String.format("Order's price is higher than current best selling price.\n" +
+                            "Best selling price = %1$d", this.maxPrice));
+                    return false;
+                }
+            }
+        } else {
+            if (doBuyingOrdersExist(stub)) {
+                int bestBuyingPrice = findBestPrice(stub, true);
+
+                if (price < bestBuyingPrice) {
+                    log.error(String.format("Order's price is lower than current best buying price.\n" +
+                            "Best buying price = %1$d", bestBuyingPrice));
+                    return false;
+                }
+            } else {
+                if (price < 1) {
+                    log.error(String.format("Order's price is lower than current best buying price.\n" +
+                            "Best buying price = 1"));
+                    return false;
+                }
+            }
+        }
+
+        // |volume + buy_volume + sell_volume| <= V_max
+        int tradersVolume = getTrader(stub, traderID)[2];
+
+        ArrayList<int[]> pricesVolumes = getPricesVolumes(stub, traderID);
+        int traderBuyVolume = 0;
+        int traderSellVolume = 0;
+        for (int[] tuple : pricesVolumes) {
+            int v = tuple[1];
+
+            if (v > 0)
+                traderBuyVolume += volume;
+            else
+                traderSellVolume += volume;
+        }
+
+        int sum = Math.abs(volume + tradersVolume + traderBuyVolume + traderSellVolume);
+
+        if (sum > this.maxVolume) {
+            log.error(String.format("Trader's volume speculation is not in the allowed boundary of [%1$d; %2$d]",
+                    this.maxVolume * (-1), this.maxVolume));
+            return false;
+        }
+
+        // net value speculation of trader is non-negative w.r.t. order book + new order
+        pricesVolumes.add(new int[] {price, volume});
+        int netValueSpeculation = netValueSpeculation(stub, traderID, pricesVolumes);
+
+        if (netValueSpeculation < 0) {
+            log.error("Net value speculation of trader is negative");
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean isCancelPermitted(ChaincodeStub stub, int orderID) {
+        ArrayList<int[]> orders = queryTable(stub, HelperMethods.orderBook);
+
+        int[] orderToDelete = orders.get(orderID - 1);
+        int traderID = orderToDelete[1];
+        int volume = orderToDelete[3];
+
+        int[] trader = getTrader(stub, traderID);
+        int traderVolume = trader[2];
+
+        ArrayList<int[]> pricesVolumes = new ArrayList<>();
+
+        int sum = 0;
+        for (int[] order : orders) {
+            if (order[1] == traderID && order[0] != orderID){
+                sum += Math.abs(order[3]);
+                pricesVolumes.add(new int[]{order[2], order[3]});
+            }
+
+        }
+
+        sum += Math.abs(traderVolume);
+
+        if (sum > this.maxVolume) {
+            log.error(String.format("Volume speculation of trader is higher than V_max.\n%1$d > %2$d", sum, this.maxPrice));
+            return false;
+        }
+
+        int netValueSpeculation = netValueSpeculation(stub, traderID, pricesVolumes);
+
+        if (netValueSpeculation < 0) {
+            log.error(String.format("Trader's net value speculation = %1$d and is negative.", netValueSpeculation));
+            return false;
+        }
+
+        log.info(String.format("\n\nsum = %1$d\nnvs = %2$d\n", sum, netValueSpeculation));
+
+        return true;
+    }
+
     public int netValue(ChaincodeStub stub, int traderID) {
         int netValue = 0;
         // get trader's cash
         int cash = getTrader(stub, traderID)[1];
         int volume = getTrader(stub, traderID)[2];
 
-        netValue = cash - cotoliq(stub, volume);
+        netValue = cash - coToLiq(stub, volume);
         return netValue;
     }
 
-    private int cotoliq(ChaincodeStub stub, int volume) {
+    public int netValueSpeculation(ChaincodeStub stub, int traderID) {
+        int result = 0;
+
+        int traderCash = getTrader(stub, traderID)[1];
+        int traderVolume = getTrader(stub, traderID)[2];
+
+        int traderSellVolume = 0;
+        int traderBuyVolume = 0;
+
+        ArrayList<int[]> traderOrders = getPricesVolumes(stub, traderID);
+
+        // count sum of prices * volumes of the trader
+        int sum = 0;
+        for (int[] order : traderOrders) {
+            int price = order[0];
+            int volume = order[1];
+
+            if (volume > 0)
+                traderBuyVolume += volume;
+            else
+                traderSellVolume += volume;
+
+            sum += price * volume;
+        }
+
+        result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume);
+
+        //log.info(String.format("sum = %1$d\ncotoliq = %2$d", sum,
+        //        coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume)));
+
+        return result;
+    }
+
+    // traderOrders must be an ArrayList of int[]{price, volume}
+    private int netValueSpeculation(ChaincodeStub stub, int traderID, ArrayList<int[]> traderOrders) {
+        int result = 0;
+
+        int[] trader = getTrader(stub, traderID);
+        int traderCash = trader[1];
+        int traderVolume = trader[2];
+
+        int traderSellVolume = 0;
+        int traderBuyVolume = 0;
+
+        // count sum of prices * volumes of the trader
+        int sum = 0;
+        for (int[] order : traderOrders) {
+            int price = order[0];
+            int volume = order[1];
+
+            if (volume > 0)
+                traderBuyVolume += volume;
+            else
+                traderSellVolume += volume;
+
+            sum += price * volume;
+        }
+
+        result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume + traderSellVolume);
+
+        //log.info(String.format("sum = %1$d\ncotoliq = %2$d", sum,
+        //        coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume)));
+
+        return result;
+    }
+
+    private int coToLiq(ChaincodeStub stub, int volume) {
         int result = 0;
 
         ArrayList<int[]> pricesVolumes = new ArrayList<>();
@@ -381,4 +670,127 @@ public class HelperMethods {
         return result;
     }
 
+    public ArrayList<int[]> getPricesVolumes(ChaincodeStub stub, int traderID) {
+        ArrayList<int[]> result = new ArrayList<int[]>();
+
+        ArrayList<int[]> orderBookRows = queryTable(stub, orderBook);
+
+        for (int[] order : orderBookRows) {
+            int[] valueToAdd = new int[2];
+
+            int id = order[1];
+            int price = order[2];
+            int volume = order[3];
+
+            if (id == traderID) {
+                valueToAdd[0] = price;
+                valueToAdd[1] = volume;
+
+                result.add(valueToAdd);
+            }
+        }
+
+        return result;
+    }
+
+    public ArrayList<int[]> getTraderOrders (ChaincodeStub stub, int traderID) {
+        ArrayList<int[]> orders = queryTable(stub, orderBook);
+        ArrayList<int[]> result = new ArrayList<>();
+
+        for (int[] order : orders) {
+            if (order[1] == traderID)
+                result.add(order);
+        }
+
+        return result;
+    }
+
+    public boolean validateData (ChaincodeStub stub) {
+        ArrayList<int[]> userTableRows = queryTable(stub, userTable);
+
+        // TODO total sum of cash over all traders remains constant
+
+        // total sum of volume holding over all traders == 0
+        // each trader has no more than V_max volume
+        // all traders have non-negative instant net position and can afford all orders they've posted
+        // sum of all orders' volumes is in boundary
+        int sumVolume = 0;
+        for (int[] row : userTableRows) {
+            int volume = row[2];
+            int id = row[0];
+
+            if (Math.abs(volume) > maxVolume) {
+                log.error(String.format("Trader %1$d has more volume than %2$d", row[1], this.maxVolume));
+                return false;
+            }
+
+            int netValue = netValue(stub, id);
+            if (netValue < 0) {
+                log.error(String.format("Instant net value of trader %1$d is negative", id));
+                return false;
+            }
+
+            int netValueSpeculation = netValueSpeculation(stub, id);
+            if (netValueSpeculation < 0) {
+                log.error(String.format("Trader %1$d can't afford all his limit orders", id));
+                return false;
+            }
+
+            int sumVolumesTrader = 0;
+            ArrayList<int[]> pricesVolumes = getPricesVolumes(stub, id);
+            for (int[] tuple : pricesVolumes) {
+                sumVolumesTrader += tuple[1];
+            }
+
+            if (Math.abs(sumVolumesTrader + volume) > this.maxVolume) {
+                log.error("Summ of volumes is larger than V_max");
+                return false;
+            }
+
+            sumVolume += volume;
+        }
+
+        if (sumVolume != 0) {
+            log.error("Summary of volume is not equal to zero");
+            return false;
+        }
+
+        // best buy price and best sell price condition
+        int bestBuyPrice = findBestPrice(stub, true);
+        int bestSellPrice = findBestPrice(stub, false);
+
+        //log.info("bbp" + String.valueOf(bestBuyPrice));
+        //log.info("bsp" + String.valueOf(bestSellPrice));
+
+        if (!(1 <= bestBuyPrice && bestBuyPrice < bestSellPrice && bestSellPrice <= this.maxPrice)) {
+            log.error("Best price condition not satisfied");
+            return false;
+        }
+
+        return true;
+    }
+
+    public int getTotalSellVolume(ChaincodeStub stub) {
+        ArrayList<int[]> orders = queryTable(stub, orderBook);
+        int result = 0;
+
+        for (int[] order : orders) {
+            if (order[3] < 0)
+                result += order[3];
+        }
+
+        return result;
+    }
+
+    public int getTotalBuyVolume(ChaincodeStub stub) {
+        ArrayList<int[]> orders = queryTable(stub, orderBook);;
+        int result = 0;
+
+        for (int[] order : orders) {
+            if (order[3] > 0)
+                result += order[3];
+        }
+
+        return result;
+    }
 }
