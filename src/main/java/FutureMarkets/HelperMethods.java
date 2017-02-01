@@ -438,6 +438,8 @@ public class HelperMethods {
         pricesVolumes.add(new int[] {price, volume});
         int netValueSpeculation = netValueSpeculation(stub, traderID, pricesVolumes);
 
+        //log.info("NVS = " + String.valueOf(netValueSpeculation));
+
         if (netValueSpeculation < 0) {
             log.error("Net value speculation of trader is negative");
             return false;
@@ -521,7 +523,7 @@ public class HelperMethods {
             sum += price * volume;
         }
 
-        result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume);
+        result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume + traderSellVolume);
 
         //log.info(String.format("sum = %1$d\ncotoliq = %2$d", sum,
         //        coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume)));

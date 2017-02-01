@@ -253,6 +253,20 @@ public class FutureMarkets extends ChaincodeBase {
             }
         } else if (isMarket && !update) {
             int[] new_order = new int[]{orderID, traderID, volume};
+
+            boolean isBuy = true;
+            if (volume > 0)
+                isBuy = false;
+
+
+            int bestPrice = helper.findBestPriceOrder(stub, isBuy, traderID)[2];
+
+            boolean isOrderValid = helper.validateOrder(stub, new int[]{orderID, traderID, bestPrice, volume});
+
+            if (!isOrderValid) {
+                log.error(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
+                return null;
+            }
             int[] matchRes = matchMarketOrder(stub, new_order);
 
             remainder = matchRes[0];
@@ -423,7 +437,7 @@ public class FutureMarkets extends ChaincodeBase {
                         .build();
 
                 try {
-                    log.info(String.format("inserting row %1$s", Arrays.toString(firstRow)));
+                    log.debug(String.format("inserting row %1$s", Arrays.toString(firstRow)));
                     result = stub.insertRow(tableName, rowInsert);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -453,7 +467,7 @@ public class FutureMarkets extends ChaincodeBase {
                             .build();
 
                     try {
-                        log.info(String.format("updating row %1$s", Arrays.toString(row)));
+                        log.debug(String.format("updating row %1$s", Arrays.toString(row)));
                         result = stub.replaceRow(tableName, rowUpdate);
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -467,7 +481,7 @@ public class FutureMarkets extends ChaincodeBase {
                 List<TableProto.Column> delKey = new ArrayList<>();
                 delKey.add(delCol);
 
-                log.info(String.format("Deleting row with id = %1$d", rows.size()));
+                log.debug(String.format("Deleting row with id = %1$d", rows.size()));
                 result = stub.deleteRow(tableName, delKey);
 
                 if (!result) {
