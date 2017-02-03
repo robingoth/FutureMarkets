@@ -383,7 +383,7 @@ public class HelperMethods {
                 int bestSellingPrice = findBestPrice(stub, false);
 
                 //log.info("bsp = " + String.valueOf(bestSellingPrice));
-                if (price >= bestSellingPrice) {
+                if (price > bestSellingPrice) {
                     log.error(String.format("Order's price is higher than current best selling price.\n" +
                             "Best selling price = %1$d", bestSellingPrice));
                     return false;
@@ -400,7 +400,7 @@ public class HelperMethods {
                 int bestBuyingPrice = findBestPrice(stub, true);
 
                 //log.info("bbp = " + String.valueOf(bestBuyingPrice));
-                if (price <= bestBuyingPrice) {
+                if (price < bestBuyingPrice) {
                     log.error(String.format("Order's price is lower than current best buying price.\n" +
                             "Best buying price = %1$d", bestBuyingPrice));
                     return false;
@@ -767,7 +767,7 @@ public class HelperMethods {
         //log.info("bbp" + String.valueOf(bestBuyPrice));
         //log.info("bsp" + String.valueOf(bestSellPrice));
 
-        if (!(1 <= bestBuyPrice && bestBuyPrice < bestSellPrice && bestSellPrice <= this.maxPrice)) {
+        if (!(1 <= bestBuyPrice && bestBuyPrice <= bestSellPrice && bestSellPrice <= this.maxPrice)) {
             log.error("Best price condition not satisfied");
             return false;
         }
