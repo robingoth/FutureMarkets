@@ -334,8 +334,8 @@ public class FutureMarkets extends ChaincodeBase {
             } else {
                 success = stub.insertRow(tableName, row);
                 if (success) {
-                    log.info(String.format("Adding order %1$d for trader %2$d",
-                            orderID, traderID));
+                    log.info(String.format("Adding order %1$s for trader %2$d",
+                            Arrays.toString(new int[]{orderID, traderID, price, volume}), traderID));
                 }
             }
         } catch (Exception e) {

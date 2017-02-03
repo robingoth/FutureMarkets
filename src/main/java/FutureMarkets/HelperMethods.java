@@ -372,8 +372,9 @@ public class HelperMethods {
         int price = order[2];
         int volume = order[3];
 
-        if (price < 1 && price > maxPrice) {
+        if (price < 1 || price > maxPrice) {
             log.error(String.format("Price of this order is not in allowed boundaries [1, %1$d]", maxPrice));
+            return false;
         }
 
         // check if the price is valid
@@ -381,7 +382,8 @@ public class HelperMethods {
             if (doSellingOrdersExist(stub)) {
                 int bestSellingPrice = findBestPrice(stub, false);
 
-                if (price > bestSellingPrice) {
+                //log.info("bsp = " + String.valueOf(bestSellingPrice));
+                if (price >= bestSellingPrice) {
                     log.error(String.format("Order's price is higher than current best selling price.\n" +
                             "Best selling price = %1$d", bestSellingPrice));
                     return false;
@@ -397,7 +399,8 @@ public class HelperMethods {
             if (doBuyingOrdersExist(stub)) {
                 int bestBuyingPrice = findBestPrice(stub, true);
 
-                if (price < bestBuyingPrice) {
+                //log.info("bbp = " + String.valueOf(bestBuyingPrice));
+                if (price <= bestBuyingPrice) {
                     log.error(String.format("Order's price is lower than current best buying price.\n" +
                             "Best buying price = %1$d", bestBuyingPrice));
                     return false;
