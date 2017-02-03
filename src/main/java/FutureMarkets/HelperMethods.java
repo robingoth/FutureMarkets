@@ -260,45 +260,39 @@ public class HelperMethods {
         log.debug("entering findBestPriceOrder");
 
         ArrayList<int[]> rows = queryTable(stub, orderBook);
-        ArrayList<int[]> orders = new ArrayList<>();
         int[] bestPrice = new int[4];
 
         if (rows.size() == 0) {
             return new int[]{0, 0, 0, 0};
         }
 
-        for (int[] row : rows) {
-            if (row[1] != traderID)
-                orders.add(row);
-        }
-
         if (is_best_buy)
         {
             // if 1st data entry is negative, no one is buying
-            if (orders.get(0)[3] < 0)
+            if (rows.get(0)[3] < 0)
             {
-                log.debug("value of first entry is " + String.valueOf(orders.get(0)[3]));
+                log.debug("value of first entry is " + String.valueOf(rows.get(0)[3]));
                 log.error("no traders are buying");
                 return new int[]{-1, 0, 0, 0};
             }
 
             // if last entry is positive, no one is selling, so take the best price from the last row
-            if (orders.get(orders.size() - 1)[3] > 0)
+            if (rows.get(rows.size() - 1)[3] > 0)
             {
-                log.debug("size is" + String.valueOf(orders.size()));
-                log.debug("value of last entry is " + String.valueOf(orders.get(orders.size() - 1)[3]));
+                log.debug("size is" + String.valueOf(rows.size()));
+                log.debug("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
 
-                for (int i = orders.size() - 1; i >= 0; i--) {
-                    int[] order = orders.get(i);
+                for (int i = rows.size() - 1; i >= 0; i--) {
+                    int[] order = rows.get(i);
                     if (order[1] != traderID) {
-                        bestPrice = orders.get(i);
+                        bestPrice = rows.get(i);
                         break;
                     }
                 }
             } else {
-                for (int i = 0; i < orders.size(); i++) {
-                    int[] cur = orders.get(i);
-                    int[] next = orders.get(i + 1);
+                for (int i = 0; i < rows.size(); i++) {
+                    int[] cur = rows.get(i);
+                    int[] next = rows.get(i + 1);
 
                     if (cur[3] > 0 && next[3] < 0) {
                         bestPrice = cur;
@@ -309,24 +303,24 @@ public class HelperMethods {
 
         } else {
             // if last data entry is positive, no one is selling
-            if (orders.get(orders.size() - 1)[3] > 0) {
+            if (rows.get(rows.size() - 1)[3] > 0) {
                 log.error("no traders are selling");
                 return new int[]{-1, 0, 0, 0};
             }
 
             // if fist entry is negative, no one is buying, so take the best price from the first row
-            if (orders.get(0)[3] < 0) {
-                for (int i = 0; i < orders.size(); i++) {
-                    int[] order = orders.get(i);
+            if (rows.get(0)[3] < 0) {
+                for (int i = 0; i < rows.size(); i++) {
+                    int[] order = rows.get(i);
                     if (order[1] != traderID) {
-                        bestPrice = orders.get(i);
+                        bestPrice = rows.get(i);
                         break;
                     }
                 }
             } else {
-                for (int i = orders.size() - 1; i > 0; i--) {
-                    int[] cur = orders.get(i);
-                    int[] next = orders.get(i - 1);
+                for (int i = rows.size() - 1; i > 0; i--) {
+                    int[] cur = rows.get(i);
+                    int[] next = rows.get(i - 1);
 
                     if (cur[3] < 0 && next[3] > 0) {
                         bestPrice = cur;
@@ -767,7 +761,7 @@ public class HelperMethods {
         //log.info("bbp" + String.valueOf(bestBuyPrice));
         //log.info("bsp" + String.valueOf(bestSellPrice));
 
-        if (!(1 <= bestBuyPrice && bestBuyPrice <= bestSellPrice && bestSellPrice <= this.maxPrice)) {
+        if (!(1 <= bestBuyPrice && bestBuyPrice < bestSellPrice && bestSellPrice <= this.maxPrice)) {
             log.error("Best price condition not satisfied");
             return false;
         }

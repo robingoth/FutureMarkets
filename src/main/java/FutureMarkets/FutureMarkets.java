@@ -230,7 +230,7 @@ public class FutureMarkets extends ChaincodeBase {
                     int[] order = orders.get(i);
                     new_order = new int[]{orderID, traderID, price, volume};
 
-                    if (price == order[2] && volume * order[3] < 0 && traderID != order[1]) {
+                    if (price == order[2] && volume * order[3] < 0) {
                         //log.info("\ntransaction\n");
                         remainder = transaction(stub, new_order, order);
                         //log.info(String.format("\nremainder = %1$d\n", remainder));
@@ -257,7 +257,6 @@ public class FutureMarkets extends ChaincodeBase {
             boolean isBuy = true;
             if (volume > 0)
                 isBuy = false;
-
 
             int bestPrice = helper.findBestPriceOrder(stub, isBuy, traderID)[2];
 
@@ -601,18 +600,21 @@ public class FutureMarkets extends ChaincodeBase {
         }
         */
 
-        // updating traders
-        trader[1] = traderMoney;
-        trader[2] = traderVolume;
-        log.info(String.format("Updating trader who posted order:\n%1$s", Arrays.toString(trader)));
+        if (traderID != matchedTraderID)
+        {
+            // updating traders
+            trader[1] = traderMoney;
+            trader[2] = traderVolume;
+            log.info(String.format("Updating trader who posted order:\n%1$s", Arrays.toString(trader)));
 
-        deposit(stub, trader, true);
+            deposit(stub, trader, true);
 
-        matchedTrader[1] = matchedTraderMoney;
-        matchedTrader[2] = matchedTraderVolume;
-        log.info(String.format("Updating trader who got matched:\n%1$s", Arrays.toString(matchedTrader)));
+            matchedTrader[1] = matchedTraderMoney;
+            matchedTrader[2] = matchedTraderVolume;
+            log.info(String.format("Updating trader who got matched:\n%1$s", Arrays.toString(matchedTrader)));
 
-        deposit(stub, matchedTrader, true);
+            deposit(stub, matchedTrader, true);
+        }
 
         return volume;
     }
