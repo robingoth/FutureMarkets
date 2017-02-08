@@ -3,25 +3,19 @@ package FutureMarkets;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeStub;
-import org.hyperledger.protos.Chaincode;
 import org.hyperledger.protos.TableProto;
 
 import java.util.*;
 import java.util.List;
 
-public class HelperMethods {
-    public static final String userTable = "UserTable";
-    public static final String orderBook = "OrderBook";
-    public static final String marketOrders = "MarketOrders";
+class HelperMethods {
+    static final String userTable = "UserTable";
+    static final String orderBook = "OrderBook";
+    static final String marketOrders = "MarketOrders";
     private static Log log = LogFactory.getLog(HelperMethods.class);
 
-    public int maxPrice;
-    public int maxVolume;
-
-    public HelperMethods(int maxPrice, int maxVolume) {
-        this.maxPrice = maxPrice;
-        this.maxVolume = maxVolume;
-    }
+    private int maxPrice = FutureMarkets.maxPrice;
+    private int maxVolume = FutureMarkets.maxVolume;
 
     /*
     0 - good
@@ -29,7 +23,7 @@ public class HelperMethods {
     -2 - error when creating a table
     NOTE: first column is always a key
      */
-    public int buildTable(ChaincodeStub stub, String tableName, String[] columnNames) {
+    int buildTable(ChaincodeStub stub, String tableName, String[] columnNames) {
         int result = 0;
         List<TableProto.ColumnDefinition> cols = new ArrayList<TableProto.ColumnDefinition>();
         log.info("creating table " + tableName);
@@ -73,7 +67,7 @@ public class HelperMethods {
         return result;
     }
 
-    public ArrayList<int[]> queryTable(ChaincodeStub stub, String tableName) {
+    ArrayList<int[]> queryTable(ChaincodeStub stub, String tableName) {
         //get the size of the table
         int size = getTableSize(stub, tableName);
         log.debug("Size of the table is " + String.valueOf(size));
@@ -109,7 +103,7 @@ public class HelperMethods {
         return rows;
     }
 
-    public int getTableSize(ChaincodeStub stub, String tableName) {
+    int getTableSize(ChaincodeStub stub, String tableName) {
         //log.info(String.format("Attempting to get the size of table %1$s", tableName));
 
         String queryRes = "";
@@ -133,11 +127,11 @@ public class HelperMethods {
                 invalidProtocolBufferException.printStackTrace();
             }
             id++;
-        }while (queryRes != "No record found !");
+        }while (!Objects.equals(queryRes, "No record found !"));
         return (id - 2);
     }
 
-    public int[] getTrader(ChaincodeStub stub, int id) {
+    int[] getTrader(ChaincodeStub stub, int id) {
         int[] trader = new int[3];
         TableProto.Column queryCol =
                 TableProto.Column.newBuilder()
@@ -166,8 +160,8 @@ public class HelperMethods {
     is_best_buy : 1 - find best buying price
                   0 - find best selling price
      */
-    public int findBestPrice(ChaincodeStub stub, boolean is_best_buy) {
-        log.debug("entering findBestPriceOrder");
+    private int findBestPrice(ChaincodeStub stub, boolean is_best_buy) {
+        log.debug("entering findBestPrice");
 
         ArrayList<int[]> rows = queryTable(stub, orderBook);
         int bestPrice = 0;
@@ -244,7 +238,7 @@ public class HelperMethods {
         return bestPrice;
     }
 
-    public int findMidPrice (ChaincodeStub stub) {
+    int findMidPrice(ChaincodeStub stub) {
         int result = 0;
 
         int bestBuyPrice = findBestPrice(stub, true);
@@ -256,7 +250,7 @@ public class HelperMethods {
     }
 
     //same as above, but does not consider orders with trader id specified
-    public int[] findBestPriceOrder(ChaincodeStub stub, boolean is_best_buy, int traderID) {
+    int[] findBestPriceOrder(ChaincodeStub stub, boolean is_best_buy, int traderID) {
         log.debug("entering findBestPriceOrder");
 
         ArrayList<int[]> rows = queryTable(stub, orderBook);
@@ -332,7 +326,7 @@ public class HelperMethods {
         return bestPrice;
     }
 
-    public boolean doBuyingOrdersExist(ChaincodeStub stub) {
+    private boolean doBuyingOrdersExist(ChaincodeStub stub) {
         ArrayList<int[]> rows = queryTable(stub, orderBook);
 
         if (rows.size() == 0)
@@ -347,7 +341,7 @@ public class HelperMethods {
             return true;
     }
 
-    public boolean doSellingOrdersExist(ChaincodeStub stub) {
+    private boolean doSellingOrdersExist(ChaincodeStub stub) {
         ArrayList<int[]> rows = queryTable(stub, orderBook);
 
         if (rows.size() == 0)
@@ -361,7 +355,7 @@ public class HelperMethods {
             return true;
     }
 
-    public boolean validateOrder(ChaincodeStub stub, int[] order) {
+    boolean validateOrder(ChaincodeStub stub, int[] order) {
         int traderID = order[1];
         int price = order[2];
         int volume = order[3];
@@ -401,8 +395,8 @@ public class HelperMethods {
                 }
             } else {
                 if (price < 1) {
-                    log.error(String.format("Order's price is lower than current best buying price.\n" +
-                            "Best buying price = 1"));
+                    log.error("Order's price is lower than current best buying price.\n" +
+                            "Best buying price = 1");
                     return false;
                 }
             }
@@ -435,22 +429,22 @@ public class HelperMethods {
         pricesVolumes.add(new int[] {price, volume});
         int netValueSpeculation = netValueSpeculation(stub, traderID, pricesVolumes);
 
-        //log.info("NVS = " + String.valueOf(netValueSpeculation));
+        log.debug("NVS = " + String.valueOf(netValueSpeculation));
 
         if (netValueSpeculation < 0) {
-            log.error("Net value speculation of trader is negative");
+            log.error(String.format("Trader %1$d can't afford all his limit orders.\nNVS = %2$d", traderID,
+                    netValueSpeculation));
             return false;
         }
 
         return true;
     }
 
-    public boolean isCancelPermitted(ChaincodeStub stub, int orderID) {
+    boolean isCancelPermitted(ChaincodeStub stub, int orderID) {
         ArrayList<int[]> orders = queryTable(stub, HelperMethods.orderBook);
 
         int[] orderToDelete = orders.get(orderID - 1);
         int traderID = orderToDelete[1];
-        int volume = orderToDelete[3];
 
         int[] trader = getTrader(stub, traderID);
         int traderVolume = trader[2];
@@ -485,7 +479,7 @@ public class HelperMethods {
         return true;
     }
 
-    public int netValue(ChaincodeStub stub, int traderID) {
+    int netValue(ChaincodeStub stub, int traderID) {
         int netValue = 0;
         // get trader's cash
         int cash = getTrader(stub, traderID)[1];
@@ -495,7 +489,7 @@ public class HelperMethods {
         return netValue;
     }
 
-    public int netValueSpeculation(ChaincodeStub stub, int traderID) {
+    private int netValueSpeculation(ChaincodeStub stub, int traderID) {
         int result = 0;
 
         int traderCash = getTrader(stub, traderID)[1];
@@ -521,9 +515,6 @@ public class HelperMethods {
         }
 
         result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume + traderSellVolume);
-
-        //log.info(String.format("sum = %1$d\ncotoliq = %2$d", sum,
-        //        coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume)));
 
         return result;
     }
@@ -554,9 +545,6 @@ public class HelperMethods {
         }
 
         result = traderCash - sum + coToLiq(stub, traderVolume + traderBuyVolume + traderSellVolume);
-
-        //log.info(String.format("sum = %1$d\ncotoliq = %2$d", sum,
-        //        coToLiq(stub, traderVolume + traderBuyVolume - traderSellVolume)));
 
         return result;
     }
@@ -643,11 +631,11 @@ public class HelperMethods {
 
         ArrayList<int[]> orderBookRows = queryTable(stub, orderBook);
 
-        for (int i = 0; i < orderBookRows.size(); i++) {
+        for (int[] orderBookRow : orderBookRows) {
             int[] valueToAdd = new int[2];
 
-            int price = orderBookRows.get(i)[2];
-            int volume = orderBookRows.get(i)[3];
+            int price = orderBookRow[2];
+            int volume = orderBookRow[3];
 
             if (isSale) {
                 if (volume < 0) {
@@ -669,7 +657,7 @@ public class HelperMethods {
         return result;
     }
 
-    public ArrayList<int[]> getPricesVolumes(ChaincodeStub stub, int traderID) {
+    private ArrayList<int[]> getPricesVolumes(ChaincodeStub stub, int traderID) {
         ArrayList<int[]> result = new ArrayList<int[]>();
 
         ArrayList<int[]> orderBookRows = queryTable(stub, orderBook);
@@ -692,7 +680,7 @@ public class HelperMethods {
         return result;
     }
 
-    public ArrayList<int[]> getTraderOrders (ChaincodeStub stub, int traderID) {
+    ArrayList<int[]> getTraderOrders(ChaincodeStub stub, int traderID) {
         ArrayList<int[]> orders = queryTable(stub, orderBook);
         ArrayList<int[]> result = new ArrayList<>();
 
@@ -704,7 +692,7 @@ public class HelperMethods {
         return result;
     }
 
-    public boolean validateData (ChaincodeStub stub) {
+    boolean validateData(ChaincodeStub stub) {
         ArrayList<int[]> userTableRows = queryTable(stub, userTable);
 
         // TODO total sum of cash over all traders remains constant
@@ -731,7 +719,8 @@ public class HelperMethods {
 
             int netValueSpeculation = netValueSpeculation(stub, id);
             if (netValueSpeculation < 0) {
-                log.error(String.format("Trader %1$d can't afford all his limit orders", id));
+                log.error(String.format("Trader %1$d can't afford all his limit orders.\nNVS = %2$d", id,
+                        netValueSpeculation));
                 return false;
             }
 
@@ -769,7 +758,7 @@ public class HelperMethods {
         return true;
     }
 
-    public int getTotalSellVolume(ChaincodeStub stub) {
+    int getTotalSellVolume(ChaincodeStub stub) {
         ArrayList<int[]> orders = queryTable(stub, orderBook);
         int result = 0;
 
@@ -781,7 +770,7 @@ public class HelperMethods {
         return result;
     }
 
-    public int getTotalBuyVolume(ChaincodeStub stub) {
+    int getTotalBuyVolume(ChaincodeStub stub) {
         ArrayList<int[]> orders = queryTable(stub, orderBook);;
         int result = 0;
 

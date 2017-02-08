@@ -12,14 +12,16 @@ import java.util.List;
 import java.util.*;
 import java.lang.Math;
 
-// TODO all args should be int, not string
 public class FutureMarkets extends ChaincodeBase {
 
     private static Log log = LogFactory.getLog(FutureMarkets.class);
+    private int roundCount = 0;
+    private int maxRound = 0;
+    static int maxPrice = 100;
+    static int maxVolume = 1500;
 
     // setting maximum price and volume
-    private HelperMethods helper = new HelperMethods(100, 150);
-
+    private HelperMethods helper = new HelperMethods();
 
     @java.lang.Override
     public String run(ChaincodeStub stub, String function, String[] args) {
@@ -43,26 +45,44 @@ public class FutureMarkets extends ChaincodeBase {
 
                 break;
             case "init":
-                init(stub);
+                // args = tradersMoney, maxPrice, maxVolume, maxRound
+                this.maxRound = args_i[1];
+
+                log.info(String.format("Global values for this run are the following:" +
+                        "\nmaxPrice = %1$d\nmaxVolume = %2$d\nmaxRound = %3$d", maxPrice, maxVolume, this.maxRound));
+
+                init(stub, args_i[0]);
                 break;
             case "post_order":
                 // args = traderID, price, volume
                 // or traderID, volume
-                boolean isRoundValid = helper.validateData(stub);
+                log.debug("Round before #" + String.valueOf(roundCount));
 
-                if (!isRoundValid){
-                    log.error("Current round is invalid. Check the data");
-                    return null;
+                if (this.roundCount > this.maxRound) {
+                    log.info("Current round number is higher than the maximum. Operation rejected.");
+                } else if (this.roundCount < this.maxRound) {
+                    boolean isRoundValid = helper.validateData(stub);
+
+                    if (!isRoundValid) {
+                        log.error("Current round is invalid. Check the data");
+                    }
+
+                    postOrder(stub, args_i, false);
+                    buildOrderBook(stub);
+
+                    boolean success = settleMargin(stub);
+
+                    if (!success) {
+                        log.error("Time for Mark To Market");
+                        markToMarket(stub);
+                    }
                 }
+                log.debug("Round after #" + String.valueOf(roundCount));
 
-                postOrder(stub, args_i, false);
-                buildOrderBook(stub);
-
-                boolean success = settleMargin(stub);
-
-                if (!success) {
-                    log.error("Time for Mark To Market");
+                if (this.roundCount == this.maxRound) {
+                    log.info("Time for Mark To Market");
                     markToMarket(stub);
+                    this.roundCount++;
                 }
 
                 break;
@@ -74,14 +94,29 @@ public class FutureMarkets extends ChaincodeBase {
                 break;
             case "cancel_order":
                 // args = orderID
-                cancelLimitOrder(stub, args_i[0]);
-                buildOrderBook(stub);
+                log.debug("Round before #" + String.valueOf(roundCount));
 
-                success = settleMargin(stub);
+                if (this.roundCount > this.maxRound){
+                    log.info("Current round number is higher than the maximum. Operation rejected.");
+                } else if (this.roundCount < this.maxRound) {
+                    boolean isCancelled = cancelLimitOrder(stub, args_i[0]);
 
-                if (!success) {
-                    log.error("Time for Mark To Market");
+                    buildOrderBook(stub);
+
+                    boolean success = settleMargin(stub);
+
+                    if (!success) {
+                        log.error("Time for Mark To Market");
+                        markToMarket(stub);
+                    }
+                }
+
+                log.debug("Round after #" + String.valueOf(roundCount));
+
+                if (this.roundCount == this.maxRound) {
+                    log.info("Time for Mark To Market");
                     markToMarket(stub);
+                    this.roundCount++;
                 }
 
                 break;
@@ -99,11 +134,39 @@ public class FutureMarkets extends ChaincodeBase {
             case "build_order_book":
                 buildOrderBook(stub);
                 break;
+            case "clean":
+                clean(stub);
+                break;
             default:
-                log.error("No matching case for function:"+function);
-
+                log.error("No matching case for function:" + function);
         }
         return null;
+    }
+
+    private void clean(ChaincodeStub stub) {
+        HashMap<String, Integer> tables = new HashMap<>();
+        tables.put(HelperMethods.marketOrders, 1);
+        tables.put(HelperMethods.orderBook, 0);
+        tables.put(HelperMethods.userTable, -1);
+
+        Set set = tables.entrySet();
+        Iterator iterator = set.iterator();
+        while(iterator.hasNext()) {
+            Map.Entry table = (Map.Entry)iterator.next();
+            String tableName = table.getKey().toString();
+
+            ArrayList<int[]> rows = helper.queryTable(stub, tableName);
+
+            if (rows.size() == 0)
+                continue;
+
+            for (int i = rows.size() - 1; i >= 0; i--) {
+                delete(stub, new int[]{rows.get(i)[0], tables.get(tableName)});
+            }
+        }
+
+        this.maxRound = 0;
+        this.roundCount = 0;
     }
 
     private void deposit(ChaincodeStub stub, int[] args, boolean update) {
@@ -160,8 +223,6 @@ public class FutureMarkets extends ChaincodeBase {
     }
 
     private String postOrder(ChaincodeStub stub, int[] args, boolean update) {
-        //log.info("PostOrder\n\n\n\n\n\n\n\n\n");
-
         String tableName = "";
 
         int orderID = 0;
@@ -218,6 +279,8 @@ public class FutureMarkets extends ChaincodeBase {
             if (!isOrderValid) {
                 log.error(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
                 return null;
+            }  else {
+                this.roundCount++;
             }
 
             do {
@@ -329,7 +392,7 @@ public class FutureMarkets extends ChaincodeBase {
         try {
             boolean success = false;
             if (update) {
-                success = stub.replaceRow(tableName, row);
+                stub.replaceRow(tableName, row);
             } else {
                 success = stub.insertRow(tableName, row);
                 if (success) {
@@ -343,7 +406,7 @@ public class FutureMarkets extends ChaincodeBase {
         return "";
     }
 
-    private void init(ChaincodeStub stub) {
+    private void init(ChaincodeStub stub, int money) {
         int resUserTable = helper.buildTable(stub, HelperMethods.userTable, new String[]{"ID", "Money", "Volume"});
         if (resUserTable < 0)
         {
@@ -364,7 +427,7 @@ public class FutureMarkets extends ChaincodeBase {
 
         for (int i = 1; i <= 5; i++)
         {
-            deposit(stub, new int[]{1000, 0}, false);
+            deposit(stub, new int[]{money, 0}, false);
         }
     }
 
@@ -404,8 +467,14 @@ public class FutureMarkets extends ChaincodeBase {
             return false;
         }
 
+        boolean result;
         ArrayList<int[]> rows = helper.queryTable(stub, tableName);
-        boolean result = stub.deleteRow(tableName, key);
+        if (rows.size() >= fieldID) {
+            result = stub.deleteRow(tableName, key);
+        } else {
+            log.error(String.format("Field id %1$d does not exist in table %2$s", fieldID, tableName));
+            return false;
+        }
 
         if (result)
         {
@@ -501,9 +570,10 @@ public class FutureMarkets extends ChaincodeBase {
 
         if (!isPermitted)
             return false;
+        else
+            this.roundCount++;
 
         return delete(stub, new int[]{orderID, 0});
-
     }
 
     private int[] matchMarketOrder(ChaincodeStub stub, int[] order) {
@@ -520,8 +590,6 @@ public class FutureMarkets extends ChaincodeBase {
 
         do {
             int[] bestPriceOrder = helper.findBestPriceOrder(stub, isBuy, order[1]);
-            log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(order),
-                    Arrays.toString(bestPriceOrder)));
 
             if (bestPriceOrder[0] == -1) {
                 result[0] = remainder;
@@ -542,6 +610,9 @@ public class FutureMarkets extends ChaincodeBase {
     }
 
     private int transaction(ChaincodeStub stub, int[] newOrder, int[] existingOrder) {
+        log.info(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(newOrder),
+                Arrays.toString(existingOrder)));
+
         int traderID = newOrder[1];
         int matchedTraderID = existingOrder[1];
 
