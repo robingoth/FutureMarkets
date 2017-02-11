@@ -1,5 +1,6 @@
 package FutureMarkets;
 
+import org.apache.commons.codec.StringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeBase;
@@ -20,7 +21,6 @@ public class FutureMarkets extends ChaincodeBase {
     static int maxPrice = 100;
     static int maxVolume = 1500;
 
-    // setting maximum price and volume
     private HelperMethods helper = new HelperMethods();
 
     @java.lang.Override
@@ -41,7 +41,7 @@ public class FutureMarkets extends ChaincodeBase {
 
         switch (function) {
             case "dummy":
-                settleMargin(stub);
+                deleteTrader(stub, args_i[0]);
 
                 break;
             case "init":
@@ -437,6 +437,7 @@ public class FutureMarkets extends ChaincodeBase {
     0 - limit order
     1 - market order
      */
+    // TODO when deleting a trader, traderID column of limit orders have to be updated as well
     private boolean delete(ChaincodeStub stub, int[] args){
         int option = args[1];
         int fieldID = args[0];
@@ -563,6 +564,38 @@ public class FutureMarkets extends ChaincodeBase {
         }
 
         return result;
+    }
+
+    private boolean deleteTrader(ChaincodeStub stub, int traderID) {
+        if (helper.getTraderOrders(stub, traderID).size() != 0){
+            log.error(String.format("Trader %1$d has orders in order book. Deletion not permitted.", traderID));
+            return false;
+        }
+
+        int numOfTraders = helper.getTableSize(stub, HelperMethods.userTable);
+        List<Integer> tradersToUpdate = new ArrayList<>();
+
+        //create list of traders to update
+        for (int i = 1; i <= numOfTraders - traderID; i++) {
+            tradersToUpdate.add(traderID + i);
+        }
+
+        ArrayList<int[]> ordersToUpdate = new ArrayList<>();
+        ArrayList<int[]> orders = helper.queryTable(stub, HelperMethods.orderBook);
+        for (int[] order : orders) {
+            if (tradersToUpdate.contains(order[1])) {
+                order[1]--;
+                ordersToUpdate.add(order);
+            }
+        }
+
+        for (int [] order : ordersToUpdate) {
+            postOrder(stub, order, true);
+        }
+
+        delete(stub, new int[]{traderID, -1});
+
+        return true;
     }
 
     private boolean cancelLimitOrder(ChaincodeStub stub, int orderID) {
@@ -738,7 +771,7 @@ public class FutureMarkets extends ChaincodeBase {
         }
     }
 
-    public boolean settleMargin (ChaincodeStub stub) {
+    private boolean settleMargin(ChaincodeStub stub) {
         ArrayList<int[]> traders = helper.queryTable(stub, HelperMethods.userTable);
         ArrayList<int[]> brokeTraders = new ArrayList<>();
 
@@ -780,7 +813,7 @@ public class FutureMarkets extends ChaincodeBase {
             if (traderVolume != 0)
                 postOrder(stub, new int[]{brokeTrader[0], -1 * brokeTrader[2]}, false);
 
-            delete(stub, new int[]{brokeTrader[0], -1});
+            deleteTrader(stub, brokeTrader[0]);
         }
 
         return canSupply;
