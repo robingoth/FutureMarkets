@@ -7,6 +7,7 @@ import org.hyperledger.protos.TableProto;
 
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
 
 class HelperMethods {
     static final String userTable = "UserTable";
@@ -489,7 +490,7 @@ class HelperMethods {
         return netValue;
     }
 
-    private int netValueSpeculation(ChaincodeStub stub, int traderID) {
+    public int netValueSpeculation(ChaincodeStub stub, int traderID) {
         int result = 0;
 
         int traderCash = getTrader(stub, traderID)[1];
@@ -555,35 +556,6 @@ class HelperMethods {
         ArrayList<int[]> pricesVolumes = new ArrayList<>();
 
         if (volume > 0) {
-            pricesVolumes = getPricesVolumes(stub, true);
-
-            int sumVolumes = 0;
-            for (int[] priceVolumeTuple : pricesVolumes) {
-                sumVolumes += priceVolumeTuple[1];
-            }
-
-            if (sumVolumes == 0) {
-                result = -volume;
-            } else if (Math.abs(sumVolumes) - volume >= 0) {
-                for (int[] priceVolumeTuple : pricesVolumes) {
-                    if (priceVolumeTuple[1] + volume <= 0) {
-                        result -= priceVolumeTuple[0] * volume;
-                        break;
-                    } else {
-                        result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
-
-                        volume += priceVolumeTuple[1];
-                    }
-                }
-            } else {
-                for (int[] priceVolumeTuple : pricesVolumes) {
-                    result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
-                    volume += priceVolumeTuple[1];
-                }
-
-                result -= volume;
-            }
-        } else {
             pricesVolumes = getPricesVolumes(stub, false);
 
             int sumVolumes = 0;
@@ -592,27 +564,57 @@ class HelperMethods {
             }
 
             if (sumVolumes == 0) {
-                result = Math.abs(volume) * this.maxPrice;
-            } else if (sumVolumes - Math.abs(volume) >= 0) {
+                result = -volume;
+            } else if (sumVolumes - volume >= 0) {
                 for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
-                    int priceOB = pricesVolumes.get(i)[0];
-                    int volumeOB = pricesVolumes.get(i)[1];
-                    if (volumeOB + volume >= 0) {
-                        result += priceOB * Math.abs(volume);
+                    if (pricesVolumes.get(i)[1] - volume >= 0) {
+                        result -= pricesVolumes.get(i)[0] * volume;
                         break;
                     } else {
-                        result += volumeOB * priceOB;
+                        result -= Math.abs(pricesVolumes.get(i)[1]) * pricesVolumes.get(i)[0];
 
-                        volume += volumeOB;
+                        volume -= pricesVolumes.get(i)[1];
                     }
                 }
             } else {
                 for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
-                    int priceOB = pricesVolumes.get(i)[0];
-                    int volumeOB = pricesVolumes.get(i)[1];
+                    result -= Math.abs(pricesVolumes.get(i)[1]) * pricesVolumes.get(i)[0];
+                    volume -= pricesVolumes.get(i)[1];
+                }
 
-                    result += volumeOB * priceOB;
-                    volume += volumeOB;
+                result -= volume;
+            }
+        } else {
+            pricesVolumes = getPricesVolumes(stub, true);
+
+            int sumVolumes = 0;
+            for (int[] priceVolumeTuple : pricesVolumes) {
+                sumVolumes += priceVolumeTuple[1];
+            }
+
+            if (sumVolumes == 0) {
+                result = Math.abs(volume) * this.maxPrice;
+            } else if (Math.abs(sumVolumes) - Math.abs(volume) >= 0) {
+                for (int[] tuple : pricesVolumes) {
+                    int priceOB = tuple[0];
+                    int volumeOB = tuple[1];
+
+                    if (volumeOB - volume <= 0) {
+                        result += priceOB * Math.abs(volume);
+                        break;
+                    } else {
+                        result += Math.abs(volumeOB) * priceOB;
+
+                        volume -= volumeOB;
+                    }
+                }
+            } else {
+                for (int[] tuple : pricesVolumes) {
+                    int priceOB = tuple[0];
+                    int volumeOB = tuple[1];
+
+                    result += Math.abs(volumeOB) * priceOB;
+                    volume -= volumeOB;
                 }
 
                 result += Math.abs(volume) * this.maxPrice;

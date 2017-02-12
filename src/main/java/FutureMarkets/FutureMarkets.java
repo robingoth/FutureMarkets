@@ -18,7 +18,7 @@ public class FutureMarkets extends ChaincodeBase {
     private static Log log = LogFactory.getLog(FutureMarkets.class);
     private int roundCount = 0;
     private int maxRound = 0;
-    static int maxPrice = 100;
+    static int maxPrice = 10;
     static int maxVolume = 1500;
 
     private HelperMethods helper = new HelperMethods();
@@ -40,9 +40,13 @@ public class FutureMarkets extends ChaincodeBase {
         }
 
         switch (function) {
-            case "dummy":
-                deleteTrader(stub, args_i[0]);
-
+            case "net_value":
+                int nv = helper.netValue(stub, args_i[0]);
+                log.info("Net Value = " + nv);
+                break;
+            case "net_value_spec":
+                int nvs = helper.netValueSpeculation(stub, args_i[0]);
+                log.info("Net Value = " + nvs);
                 break;
             case "init":
                 // args = tradersMoney, maxPrice, maxVolume, maxRound
@@ -67,7 +71,7 @@ public class FutureMarkets extends ChaincodeBase {
                         log.error("Current round is invalid. Check the data");
                     }
 
-                    postOrder(stub, args_i, false);
+                    postOrder(stub, args_i, false, false);
                     buildOrderBook(stub);
 
                     boolean success = settleMargin(stub);
@@ -89,7 +93,7 @@ public class FutureMarkets extends ChaincodeBase {
             case "update_order":
                 // args = orderID, traderID, price, volume
                 // or orderID, traderID, volume
-                postOrder(stub, args_i, true);
+                postOrder(stub, args_i, true, false);
                 buildOrderBook(stub);
                 break;
             case "cancel_order":
@@ -222,7 +226,7 @@ public class FutureMarkets extends ChaincodeBase {
         }
     }
 
-    private String postOrder(ChaincodeStub stub, int[] args, boolean update) {
+    private String postOrder(ChaincodeStub stub, int[] args, boolean update, boolean bypass) {
         String tableName = "";
 
         int orderID = 0;
@@ -323,7 +327,9 @@ public class FutureMarkets extends ChaincodeBase {
 
             int bestPrice = helper.findBestPriceOrder(stub, isBuy, traderID)[2];
 
-            boolean isOrderValid = helper.validateOrder(stub, new int[]{orderID, traderID, bestPrice, volume});
+            boolean isOrderValid = true;
+            if (!bypass)
+                isOrderValid = helper.validateOrder(stub, new int[]{orderID, traderID, bestPrice, volume});
 
             if (!isOrderValid) {
                 log.error(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
@@ -590,7 +596,7 @@ public class FutureMarkets extends ChaincodeBase {
         }
 
         for (int [] order : ordersToUpdate) {
-            postOrder(stub, order, true);
+            postOrder(stub, order, true, false);
         }
 
         delete(stub, new int[]{traderID, -1});
@@ -634,6 +640,7 @@ public class FutureMarkets extends ChaincodeBase {
                 numOfTransactions++;
 
                 result[0] = remainder;
+                result[1] = numOfTransactions;
             } else {
                 break;
             }
@@ -689,7 +696,7 @@ public class FutureMarkets extends ChaincodeBase {
         }
         else {
             existingOrder[existingOrder.length - 1] = existingOrderVolume;
-            postOrder(stub, existingOrder, true);
+            postOrder(stub, existingOrder, true, false);
         }
 
         /*
@@ -758,14 +765,14 @@ public class FutureMarkets extends ChaincodeBase {
         int j = 1;
         for (int[] row_buy : rows_buy) {
             row_buy[0] = j;
-            postOrder(stub, row_buy, true);
+            postOrder(stub, row_buy, true, false);
 
             j++;
         }
 
         for (int[] row_sell : rows_sell) {
             row_sell[0] = j;
-            postOrder(stub, row_sell, true);
+            postOrder(stub, row_sell, true, false);
 
             j++;
         }
@@ -787,36 +794,42 @@ public class FutureMarkets extends ChaincodeBase {
             return true;
         }
 
-
-        boolean canSupply = true;
-        for (int[] brokeTrader : brokeTraders) {
+        for (int [] brokeTrader : brokeTraders) {
             ArrayList<int[]> traderOrders = helper.getTraderOrders(stub, brokeTrader[0]);
-            int traderVolume = brokeTrader[2];
-
-            for (int i = traderOrders.size() - 1; i >= 0; i--) {
-                delete(stub, new int[]{traderOrders.get(i)[0], 0});
+            for (int j = traderOrders.size() - 1; j >= 0; j--) {
+                delete(stub, new int[]{traderOrders.get(j)[0], 0});
             }
+        }
 
-            int totalSellVolume = Math.abs(helper.getTotalSellVolume(stub));
-            int totalBuyVolume = helper.getTotalBuyVolume(stub);
+        int totalSellVolume = Math.abs(helper.getTotalSellVolume(stub));
+        int totalBuyVolume = helper.getTotalBuyVolume(stub);
+        int buyVolumeOfBrokeTraders = 0;
+        int sellVolumeOfBrokeTraders = 0;
+        for (int [] brokeTrader : brokeTraders) {
+            if (brokeTrader[2] > 0)
+                buyVolumeOfBrokeTraders += brokeTrader[2];
+            else
+                sellVolumeOfBrokeTraders += brokeTrader[2];
+        }
 
-            log.info(String.format("Trader volume = %1$d", traderVolume));
+        if (sellVolumeOfBrokeTraders > totalSellVolume || buyVolumeOfBrokeTraders > totalBuyVolume) {
+            log.error("Market cannot supply the margin settlement for all traders");
+            return false;
+        }
+
+        for (int i = brokeTraders.size() - 1; i >= 0; i--) {
+            int traderVolume = brokeTraders.get(i)[2];
+
             log.info(String.format("Total buy volume = %1$d", totalBuyVolume));
             log.info(String.format("Total sell volume = %1$d", totalSellVolume));
 
-            if ((traderVolume < 0 && Math.abs(traderVolume) > totalSellVolume) || (traderVolume > 0 && traderVolume > totalBuyVolume)) {
-                log.error("Market cannot supply the margin settlement for all traders");
-                canSupply = false;
-                break;
-            }
-
             if (traderVolume != 0)
-                postOrder(stub, new int[]{brokeTrader[0], -1 * brokeTrader[2]}, false);
+                postOrder(stub, new int[]{brokeTraders.get(i)[0], -1 * brokeTraders.get(i)[2]}, false, true);
 
-            deleteTrader(stub, brokeTrader[0]);
+            deleteTrader(stub, brokeTraders.get(i)[0]);
         }
 
-        return canSupply;
+        return true;
     }
 
     private void markToMarket (ChaincodeStub stub) {
