@@ -18,8 +18,8 @@ public class FutureMarkets extends ChaincodeBase {
     private static Log log = LogFactory.getLog(FutureMarkets.class);
     private int roundCount = 0;
     private int maxRound = 0;
-    static int maxPrice = 10;
-    static int maxVolume = 1500;
+    static int maxPrice = 100;
+    static int maxVolume = 1000;
 
     private HelperMethods helper = new HelperMethods();
 

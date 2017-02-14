@@ -1,5 +1,6 @@
 package FutureMarkets;
 
+import org.apache.commons.codec.StringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeStub;
@@ -413,11 +414,12 @@ class HelperMethods {
             int v = tuple[1];
 
             if (v > 0)
-                traderBuyVolume += volume;
+                traderBuyVolume += v;
             else
-                traderSellVolume += volume;
+                traderSellVolume += v;
         }
 
+        log.info(String.format("%1$d - %2$d - %3$d - %4$d", volume, tradersVolume, traderBuyVolume, traderSellVolume));
         int sum = Math.abs(volume + tradersVolume + traderBuyVolume + traderSellVolume);
 
         if (sum > this.maxVolume) {
