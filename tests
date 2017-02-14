@@ -1,0 +1,194 @@
+============================================================================
+post order
+============================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "9", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "7", "-10"]}'
+------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "9", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "8", "10"]}'
+-----------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "9", "-12"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "8", "15"]}'
+-----------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "9", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "5"]}'
+============================================================================================================
+Order validation
+============================================================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "5", "-20"]}'
+--------------------------------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "10", "20"]}'
+--------------------------------------------------------------------------------------------------------------------------
+SET V_max = 25
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "5", "20"]}'
+--------------------------------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "25"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "350", "0"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "5", "20"]}'
+============================================================================================================================
+net value
+============================================================================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "990", "10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "3", "1010", "-10"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "3"]}'
+--------------------------------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "4"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "3"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "7", "2"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-5"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "970", "30"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "3", "1030", "-30"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "3"]}'
+--------------------------------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "970", "30"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "3", "1030", "-30"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value", "3"]}'
+--------------------------------------------------------------------------------------------------------------------------
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "7", "22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "8", "-4"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "1"]}'
+=============================================================================================================================
+mark to market
+=============================================================================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "7"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "5", "34"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "7", "-22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "9", "-40"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "1000", "-49"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "3", "1000", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "4", "1000", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "5", "1000", "9"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "10", "-10"]}'
+=============================================================================================================================
+margin settlement
+=============================================================================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "5", "34"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "5", "6", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "7", "-22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "4", "9", "-40"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "100", "-49"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "3", "-200", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "4", "1000", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "5", "1000", "9"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "2", "10", "-10"]}'
+=============================================================================================================================
+cancel order
+=============================================================================================================================
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'
+peer chaincode invoke --logging-level debug -l java -c '{"Function": "init", "Args": ["1000", "100"]}' -n FutureMarkets
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "5", "10"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "11"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "7", "-22"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "6", "20"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", "8", "-10"]}'
+
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["cancel_order", "4"]}'
+
+
+
+

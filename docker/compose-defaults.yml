@@ -1,0 +1,12 @@
+baseimage:
+  image: hyperledger/fabric-baseimage:x86_64-0.2.0
+vp:
+  image: hyperledger/fabric-peer:fm
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock 
+    - /Users/vladyslav/Documents/Study/Trento/ResearchProj/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets
+  environment:
+    - CORE_PEER_ADDRESSAUTODETECT=true
+    - CORE_VM_ENDPOINT=unix:///var/run/docker.sock
+    #- CORE_LOGGING_LEVEL=DEBUG
+  command: peer node start
