@@ -9,6 +9,6 @@ Files and folders here are the following:
 + **excelParser** - python script for parsing files in "data" folder and adapting the data to the specific format
 + **fabric** - folder with Hyperledger fabric code. I uploaded it because I made some changes to the code code.
 
-#### FutureMarkets code is located in fabric/examples/chaincode/java/FutureMarkets
+FutureMarkets code is located in fabric/examples/chaincode/java/FutureMarkets
 
-#### In the folder fabric/FutureMarketsLocal you can find a centralized version of FuturesMEX protocol that works by writing data to files instead of using hyperledger
+In the folder fabric/FutureMarketsLocal you can find a centralized version of FuturesMEX protocol that works by writing data to files instead of using hyperledger
