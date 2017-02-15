@@ -5,9 +5,10 @@ This is an implementation of FuturesMEX protocol for hyperledger fabric.
 ### Development mode
 In development mode you can see the log for debugging and test the functionality of the program. I assume you followed the Java chaincode setup guide provided by hyperledger fabric team.
 Steps are following:
-1. `cd /path/to/fabric/devenv`
-2. `vagrant up`, this might take few minutes
-3. `vagrant ssh`
+
+1. `cd /path/to/fabric/devenv` 
+2. `vagrant up`, this might take few minutes 
+3. `vagrant ssh` 
 4. `peer node start --peer-chaincodedev`
 5. In a second terminal do steps 1 and 3.
 6. *cd* to $GOPATH/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/
