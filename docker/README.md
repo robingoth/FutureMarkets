@@ -1,5 +1,5 @@
 ## Usage
-*cd* to directory with docker-compose.yml file and run `docker-compose up`
+*cd* to directory with **docker-compose.yml** file and run `docker-compose up`
 
 ## Note
 
