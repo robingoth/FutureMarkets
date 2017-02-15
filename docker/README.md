@@ -1,3 +1,6 @@
+## Usage
+*cd* to directory with docker-compose.yml file and run `docker-compose up`
+
 ## Note
 
 Docker-compose file is adjusted for Docker for Mac. Therefore, behavior might be different on Windows and Linux.
