@@ -45,13 +45,13 @@ In order to simulate the behavior of 4 traders you should do the following:
 + `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "traders", "Args": ["1"]}'`  
    Query traders.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1", "1"]}'`  
-   Post a limit order. Arguments are: traderID, price, volume.
+   Post a limit order. Arguments are: **traderID**, **price**, **volume**.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1"]}'`  
-   Post a market order. Arguments are: traderID, volume.
+   Post a market order. Arguments are: **traderID**, **volume**.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'`  
    This function cleans all the data from hyperledger. Created to clean up everything without a need to redeploy all code.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["cancel_order", "1"]}'`  
-   Cancel order. Argument is the orderID
+   Cancel order. Argument is the **orderID**.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "1000", "50"]}'`  
-   Update trader information. Arguments are: traderID, money amount, available volume  
-   **NOTE** it will redefine the rows, not add to existing values
+   Update trader information. Arguments are: **traderID**, **money amount**, **available volume**.  
+   **NOTE**: it will redefine the rows, not add to existing values.
