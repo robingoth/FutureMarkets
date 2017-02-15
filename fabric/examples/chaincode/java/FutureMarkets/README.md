@@ -26,6 +26,7 @@ In order to simulate the behavior of 4 traders you should do the following:
    `docker-compose exec vp1 peer chaincode deploy -l java -p /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets -c '{"Function": "init", "Args": ["1000", "1000"]}'`
    As a responce you will get a hash string like `44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149`
    This hash string will be used in the next commands.
+   **NOTE**: you should wait for few minutes until the chaincode is deployed. To verify this you can run a simple query command and see if it is executed properly.
 5. In the same terminal copy and paste the following command without running it
   `docker-compose exec vp1 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 1`
 6. Do the same in other three terminal windows for three following commands:
@@ -35,12 +36,22 @@ In order to simulate the behavior of 4 traders you should do the following:
 7. Run all four commands in each terminal. After this the python script will send requests to the hyperledger and you will be able to see transactions in the peer log.
 
 ### Available commands:
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Function": "init", "Args": ["1000", "15"]}'`
++ `peer chaincode deploy -l java -n FutureMarkets -c '{"Function": "init", "Args": ["1000", "15"]}'`
+   This function should be executed before all the others. First argument is money amount for each of five traders, second argument is a maximum round number.
 + `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "order_book", "Args": ["1"]}'`
+   Query limit orders.
 + `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "market_orders", "Args": ["1"]}'`
+   Query market orders.
 + `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "traders", "Args": ["1"]}'`
+   Query traders.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1", "1"]}'`
+   Post a limit order. Arguments are: traderID, price, volume.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1"]}'`
+   Post a market order. Arguments are: traderID, volume.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'`
+   This function cleans all the data from hyperledger. Created to clean up everything without a need to redeploy all code.
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["cancel_order", "1"]}'`
+   Cancel order. Argument is the orderID
 + `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "1000", "50"]}'`
+   Update trader information. Arguments are: traderID, money amount, available volume
+   **NOTE** it will redefine the rows, not add to existing values
