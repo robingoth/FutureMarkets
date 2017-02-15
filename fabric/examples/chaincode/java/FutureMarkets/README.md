@@ -36,22 +36,22 @@ In order to simulate the behavior of 4 traders you should do the following:
 7. Run all four commands in each terminal. After this the python script will send requests to the hyperledger and you will be able to see transactions in the peer log.
 
 ### Available commands:
-+ `peer chaincode deploy -l java -n FutureMarkets -c '{"Function": "init", "Args": ["1000", "15"]}'`
++ `peer chaincode deploy -l java -n FutureMarkets -c '{"Function": "init", "Args": ["1000", "15"]}'`  
    This function should be executed before all the others. First argument is money amount for each of five traders, second argument is a maximum round number.
-+ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "order_book", "Args": ["1"]}'`
++ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "order_book", "Args": ["1"]}'`  
    Query limit orders.
-+ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "market_orders", "Args": ["1"]}'`
++ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "market_orders", "Args": ["1"]}'`  
    Query market orders.
-+ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "traders", "Args": ["1"]}'`
++ `peer chaincode query -l java -n FutureMarkets -c '{ "Function": "traders", "Args": ["1"]}'`  
    Query traders.
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1", "1"]}'`
++ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1", "1"]}'`  
    Post a limit order. Arguments are: traderID, price, volume.
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1"]}'`
++ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "1"]}'`  
    Post a market order. Arguments are: traderID, volume.
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'`
++ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["clean"]}'`  
    This function cleans all the data from hyperledger. Created to clean up everything without a need to redeploy all code.
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["cancel_order", "1"]}'`
++ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["cancel_order", "1"]}'`  
    Cancel order. Argument is the orderID
-+ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "1000", "50"]}'`
-   Update trader information. Arguments are: traderID, money amount, available volume
++ `peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["deposit", "1", "1000", "50"]}'`  
+   Update trader information. Arguments are: traderID, money amount, available volume  
    **NOTE** it will redefine the rows, not add to existing values
