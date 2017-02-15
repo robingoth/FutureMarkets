@@ -1,6 +1,5 @@
-
-**Note:** This is a **read-only mirror** of the formal [Gerrit](https://gerrit.hyperledger.org/r/#/admin/projects/fabric) repository,
-where active development is ongoing. Issue tracking is handled in [Jira](https://jira.hyperledger.org/secure/RapidBoard.jspa?projectKey=FAB&rapidView=5&view=planning)
+## Installation
+Java development environment installation instructions can be found [here](http://hyperledger-fabric.readthedocs.io/en/v0.6/Setup/JAVAChaincode/)
 
 ## Incubation Notice
 
