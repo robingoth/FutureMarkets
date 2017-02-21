@@ -1,4 +1,4 @@
-`version: '2'
+version: '2'
 services:
   baseimage:
     image: hyperledger/fabric-baseimage:x86_64-0.2.0
@@ -7,6 +7,7 @@ services:
     image: hyperledger/fabric-peer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /Users/vladyslav/Documents/Study/Trento/ResearchProj/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets
     ports:
       - "7050:7050"
       - "7051:7051"
@@ -27,6 +28,7 @@ services:
     image: hyperledger/fabric-peer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /Users/vladyslav/Documents/Study/Trento/ResearchProj/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets
     ports:
       - "8050:7050"
       - "8051:7051"
@@ -50,6 +52,7 @@ services:
     image: hyperledger/fabric-peer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /Users/vladyslav/Documents/Study/Trento/ResearchProj/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets
     ports:
       - "9050:7050"
       - "9051:7051"
@@ -73,6 +76,7 @@ services:
     image: hyperledger/fabric-peer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /Users/vladyslav/Documents/Study/Trento/ResearchProj/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/:/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets
     ports:
       - "10050:7050"
       - "10051:7051"

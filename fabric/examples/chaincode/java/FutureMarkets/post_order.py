@@ -38,4 +38,4 @@ with open("/opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java
         else:
             pipe = Popen(cmd, shell=True)
             pipe.communicate()
-        time.sleep(1)
+        #time.sleep(1)
