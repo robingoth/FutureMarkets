@@ -11,4 +11,4 @@ All data points:
 ```
 Performance chart:
 
-[!alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/FutureMarketsLocal/Perf_chart.png)
+![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/FutureMarketsLocal/Perf_chart.png)
