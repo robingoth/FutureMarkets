@@ -1,6 +1,14 @@
 ## FutureMarkets
 This is an implementation of FuturesMEX protocol for hyperledger fabric.
 
+## Performance evaluation
+Chaincode explorer tool was used for performace measures. The decentralized protocol was running in docker container with one CPU for 1000 transactions. 
+The transaction rate chart is below:
+
+![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRateGraph.png)
+
+From the results we could see that they are incorrect, because transaction rate is too high for the time it took to execute the transactions. Chaincode explorer tool is currently under development and could be unreliable.
+
 ## Usage
 ### Development mode
 In development mode you can see the log for debugging and test the functionality of the program. I assume you followed the Java chaincode setup guide provided by hyperledger fabric team.
