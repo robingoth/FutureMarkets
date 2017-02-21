@@ -5,38 +5,62 @@ import java.util.*;
 
 public class FutureMarkets {
     // setting maximum price and volume
-    private static HelperMethods helper = new HelperMethods(100, 1500);
+    private static HelperMethods helper = new HelperMethods(100, 15000);
 
     public static void main(String[] args) {
-        long start = System.nanoTime();
-
         FutureMarkets fm = new FutureMarkets();
 
-        fm.run("init", new String[]{"1500"});
-        try (BufferedReader br = new BufferedReader(new FileReader("data.csv"))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] values = line.split(",");
-                String[] input = values;
+        double[] txnRateArr = new double[100];
 
-                if (Integer.parseInt(values[1]) == 0) {
-                    input = new String[]{values[0], values[2]};
+        for (int i = 0; i < 100; i++) {
+            System.out.println(i);
+            double start = System.nanoTime();
+
+            fm.run("init", new String[]{"15000"});
+            try (BufferedReader br = new BufferedReader(new FileReader("data.csv"))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] values = line.split(",");
+                    String[] input = values;
+
+                    if (Integer.parseInt(values[1]) == 0) {
+                        input = new String[]{values[0], values[2]};
+                    }
+
+                    fm.run("post_order", input);
                 }
-
-                fm.run("post_order", input);
+            } catch (IOException ex) {
+                System.out.println(ex.getMessage());
             }
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+
+            double end = System.nanoTime();
+
+            txnRateArr[i] = (500 * Math.pow(10, 9)) / (end - start);
+
+            System.out.println(String.valueOf(txnRateArr[i]));
+
+            try {
+                System.out.println("Deleting contents of files");
+                PrintWriter pw1 = new PrintWriter(HelperMethods.orderBook);
+                PrintWriter pw2 = new PrintWriter(HelperMethods.userTable);
+                PrintWriter pw3 = new PrintWriter(HelperMethods.marketOrders);
+
+                pw1.close();
+                pw2.close();
+                pw3.close();
+            } catch (FileNotFoundException ex) {
+                System.out.println(ex.getMessage());
+            }
         }
 
-        long end = System.nanoTime();
-
-        System.out.print("Elapsed time in nanoseconds = " + String.valueOf(end - start));
-
+        System.out.println(Arrays.toString(txnRateArr));
+        double mean = helper.mean(txnRateArr);
+        System.out.println(mean);
+        System.out.println("done.");
     }
 
     private void run(String function, String[] args) {
-        System.out.println("In run, function:" + function);
+        //System.out.println("In run, function:" + function);
 
         // convert all arguments from string to int
         int[] args_i = new int[args.length];
@@ -45,7 +69,7 @@ public class FutureMarkets {
                 args_i[i] = Integer.parseInt(args[i]);
                 //log.info(String.format("%1$s -> %2$d", args[i], args_i[i]));
             } catch (NumberFormatException e){
-                System.out.println(e.getMessage());
+                //System.out.println(e.getMessage());
                 System.exit(-1);
             }
         }
@@ -64,16 +88,16 @@ public class FutureMarkets {
                 boolean isRoundValid = helper.validateData();
 
                 if (!isRoundValid){
-                    System.out.println("Current round is invalid. Check the data");
+                    //System.out.println("Current round is invalid. Check the data");
                 }
 
-                postOrder(args_i, false);
+                postOrder(args_i, false, false);
                 buildOrderBook();
 
                 boolean success = settleMargin();
 
                 if (!success) {
-                    System.out.println("Time for Mark To Market");
+                    //System.out.println("Time for Mark To Market");
                     markToMarket();
                 }
 
@@ -81,7 +105,7 @@ public class FutureMarkets {
             case "update_order":
                 // args = orderID, traderID, price, volume
                 // or orderID, traderID, volume
-                postOrder(args_i, true);
+                postOrder(args_i, true, false);
                 buildOrderBook();
                 break;
             case "cancel_order":
@@ -92,7 +116,7 @@ public class FutureMarkets {
                 success = settleMargin();
 
                 if (!success) {
-                    System.out.println("Time for Mark To Market");
+                    //System.out.println("Time for Mark To Market");
                     markToMarket();
                 }
                 break;
@@ -111,7 +135,7 @@ public class FutureMarkets {
                 buildOrderBook();
                 break;
             default:
-                System.out.println("No matching case for function:"+function);
+                //System.out.println("No matching case for function:"+function);
 
         }
     }
@@ -152,13 +176,13 @@ public class FutureMarkets {
                 out.println(line);
             }
         } catch (FileNotFoundException ex) {
-            System.out.println(ex.getMessage());
+            //System.out.println(ex.getMessage());
         }
 
 
     }
 
-    private String postOrder(int[] args, boolean update) {
+    private String postOrder(int[] args, boolean update, boolean bypass) {
         String tableName = "";
 
         int orderID = 0;
@@ -168,9 +192,9 @@ public class FutureMarkets {
 
         boolean isMarket = false;
 
-        //System.out.println("Number of arguments = " + args.length);
+        ////System.out.println("Number of arguments = " + args.length);
         if ((args.length == 3 && update) || (args.length == 2 && !update)) {
-            System.out.println("Type of order = Market");
+            //System.out.println("Type of order = Market");
             isMarket = true;
         }
 
@@ -211,17 +235,17 @@ public class FutureMarkets {
             boolean isOrderValid = helper.validateOrder(new_order);
 
             if (!isOrderValid) {
-                System.out.println(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
+                //System.out.println(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
                 return null;
             }
 
             do {
-                //System.out.println("\nQuerying orders\n");
+                ////System.out.println("\nQuerying orders\n");
                 ArrayList<int[]> orders = helper.queryTable(HelperMethods.orderBook);
 
                 int i = 0;
                 for (i = 0; i < orders.size(); i++) {
-                    //System.out.println(String.format("\ni = %1$d\n", i));
+                    ////System.out.println(String.format("\ni = %1$d\n", i));
                     int[] order = orders.get(i);
                     new_order = new int[]{orderID, traderID, price, volume};
 
@@ -240,7 +264,7 @@ public class FutureMarkets {
             } while (remainder != 0);
 
             if (volume == 0) {
-                System.out.println("Order was totally fulfilled, therefore not posted");
+                //System.out.println("Order was totally fulfilled, therefore not posted");
                 return null;
             }
         } else if (isMarket && !update) {
@@ -252,10 +276,12 @@ public class FutureMarkets {
 
             int bestPrice = helper.findBestPriceOrder(isBuy, traderID)[2];
 
-            boolean isOrderValid = helper.validateOrder(new int[]{orderID, traderID, bestPrice, volume});
+            boolean isOrderValid = true;
+            if (!bypass)
+                isOrderValid = helper.validateOrder(new int[]{orderID, traderID, bestPrice, volume});
 
             if (!isOrderValid) {
-                System.out.println(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
+                //System.out.println(String.format("Order %1$s is invalid", Arrays.toString(new_order)));
                 return null;
             }
 
@@ -265,7 +291,7 @@ public class FutureMarkets {
             int numOfTransactions = matchRes[1];
 
             if (remainder == 0 && numOfTransactions != 0) {
-                System.out.println("Order was totally fulfilled, therefore not posted");
+                //System.out.println("Order was totally fulfilled, therefore not posted");
                 return null;
             } else if (remainder == 0 && numOfTransactions == 0)
                 remainder = volume;
@@ -298,7 +324,7 @@ public class FutureMarkets {
                 out.println(line);
             }
         } catch (FileNotFoundException ex) {
-            System.out.println(ex.getMessage());
+            //System.out.println(ex.getMessage());
         }
 
         return "";
@@ -328,7 +354,7 @@ public class FutureMarkets {
         }
 
         if (tableName.equals("")) {
-            System.out.println(String.format("Table with name %1$s does not exist", option));
+            //System.out.println(String.format("Table with name %1$s does not exist", option));
             return false;
         }
 
@@ -337,11 +363,11 @@ public class FutureMarkets {
         if (rows.size() >= fieldID) {
             rows.remove(fieldID - 1);
         } else {
-            System.out.println(String.format("Field id %1$d does not exist in table %2$s", fieldID, tableName));
+            //System.out.println(String.format("Field id %1$d does not exist in table %2$s", fieldID, tableName));
             return false;
         }
 
-        System.out.println(String.format("The row with id = %1$d successfully deleted from table %2$s", fieldID, tableName));
+        //System.out.println(String.format("The row with id = %1$d successfully deleted from table %2$s", fieldID, tableName));
 
         if (rows.size() != 1 && fieldID != rows.size()) {
             // insert fieldID + 1
@@ -356,8 +382,40 @@ public class FutureMarkets {
                 out.println(line);
             }
         } catch (FileNotFoundException ex) {
-            System.out.println(ex.getMessage());
+            //System.out.println(ex.getMessage());
         }
+
+        return true;
+    }
+
+    private boolean deleteTrader(int traderID) {
+        if (helper.getTraderOrders(traderID).size() != 0){
+            //System.out.println(String.format("Trader %1$d has orders in order book. Deletion not permitted.", traderID));
+            return false;
+        }
+
+        int numOfTraders = helper.getTableSize(HelperMethods.userTable);
+        List<Integer> tradersToUpdate = new ArrayList<>();
+
+        //create list of traders to update
+        for (int i = 1; i <= numOfTraders - traderID; i++) {
+            tradersToUpdate.add(traderID + i);
+        }
+
+        ArrayList<int[]> ordersToUpdate = new ArrayList<>();
+        ArrayList<int[]> orders = helper.queryTable(HelperMethods.orderBook);
+        for (int[] order : orders) {
+            if (tradersToUpdate.contains(order[1])) {
+                order[1]--;
+                ordersToUpdate.add(order);
+            }
+        }
+
+        for (int [] order : ordersToUpdate) {
+            postOrder(order, true, false);
+        }
+
+        delete(new int[]{traderID, -1});
 
         return true;
     }
@@ -396,6 +454,7 @@ public class FutureMarkets {
                 numOfTransactions++;
 
                 result[0] = remainder;
+                result[1] = numOfTransactions;
             } else {
                 break;
             }
@@ -405,8 +464,8 @@ public class FutureMarkets {
     }
 
     private int transaction(int[] newOrder, int[] existingOrder) {
-        System.out.println(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(newOrder),
-                Arrays.toString(existingOrder)));
+        //System.out.println(String.format("Matching two orders:\n%1$s\n%2$s", Arrays.toString(newOrder),
+        //        Arrays.toString(existingOrder)));
 
         int traderID = newOrder[1];
         int matchedTraderID = existingOrder[1];
@@ -451,7 +510,7 @@ public class FutureMarkets {
         }
         else {
             existingOrder[existingOrder.length - 1] = existingOrderVolume;
-            postOrder(existingOrder, true);
+            postOrder(existingOrder, true, false);
         }
 
         /*
@@ -471,13 +530,13 @@ public class FutureMarkets {
             // updating traders
             trader[1] = traderMoney;
             trader[2] = traderVolume;
-            System.out.println(String.format("Updating trader who posted order:\n%1$s", Arrays.toString(trader)));
+            //System.out.println(String.format("Updating trader who posted order:\n%1$s", Arrays.toString(trader)));
 
             deposit(trader, true);
 
             matchedTrader[1] = matchedTraderMoney;
             matchedTrader[2] = matchedTraderVolume;
-            System.out.println(String.format("Updating trader who got matched:\n%1$s", Arrays.toString(matchedTrader)));
+            //System.out.println(String.format("Updating trader who got matched:\n%1$s", Arrays.toString(matchedTrader)));
 
             deposit(matchedTrader, true);
         }
@@ -520,14 +579,14 @@ public class FutureMarkets {
         int j = 1;
         for (int[] row_buy : rows_buy) {
             row_buy[0] = j;
-            postOrder(row_buy, true);
+            postOrder(row_buy, true, false);
 
             j++;
         }
 
         for (int[] row_sell : rows_sell) {
             row_sell[0] = j;
-            postOrder(row_sell, true);
+            postOrder(row_sell, true, false);
 
             j++;
         }
@@ -545,40 +604,41 @@ public class FutureMarkets {
         }
 
         if (brokeTraders.size() == 0) {
-            System.out.println("No traders are broke");
             return true;
         }
 
-
-        boolean canSupply = true;
-        for (int[] brokeTrader : brokeTraders) {
+        for (int [] brokeTrader : brokeTraders) {
             ArrayList<int[]> traderOrders = helper.getTraderOrders(brokeTrader[0]);
-            int traderVolume = brokeTrader[2];
-
-            for (int i = traderOrders.size() - 1; i >= 0; i--) {
-                delete(new int[]{traderOrders.get(i)[0], 0});
+            for (int j = traderOrders.size() - 1; j >= 0; j--) {
+                delete(new int[]{traderOrders.get(j)[0], 0});
             }
-
-            int totalSellVolume = Math.abs(helper.getTotalSellVolume());
-            int totalBuyVolume = helper.getTotalBuyVolume();
-
-            System.out.println(String.format("Trader volume = %1$d", traderVolume));
-            System.out.println(String.format("Total buy volume = %1$d", totalBuyVolume));
-            System.out.println(String.format("Total sell volume = %1$d", totalSellVolume));
-
-            if ((traderVolume < 0 && Math.abs(traderVolume) > totalSellVolume) || (traderVolume > 0 && traderVolume > totalBuyVolume)) {
-                System.out.println("Market cannot supply the margin settlement for all traders");
-                canSupply = false;
-                break;
-            }
-
-            if (traderVolume != 0)
-                postOrder(new int[]{brokeTrader[0], -1 * brokeTrader[2]}, false);
-
-            delete(new int[]{brokeTrader[0], -1});
         }
 
-        return canSupply;
+        int totalSellVolume = Math.abs(helper.getTotalSellVolume());
+        int totalBuyVolume = helper.getTotalBuyVolume();
+        int buyVolumeOfBrokeTraders = 0;
+        int sellVolumeOfBrokeTraders = 0;
+        for (int [] brokeTrader : brokeTraders) {
+            if (brokeTrader[2] > 0)
+                buyVolumeOfBrokeTraders += brokeTrader[2];
+            else
+                sellVolumeOfBrokeTraders += brokeTrader[2];
+        }
+
+        if (sellVolumeOfBrokeTraders > totalSellVolume || buyVolumeOfBrokeTraders > totalBuyVolume) {
+            return false;
+        }
+
+        for (int i = brokeTraders.size() - 1; i >= 0; i--) {
+            int traderVolume = brokeTraders.get(i)[2];
+
+            if (traderVolume != 0)
+                postOrder(new int[]{brokeTraders.get(i)[0], -1 * brokeTraders.get(i)[2]}, false, true);
+
+            deleteTrader(brokeTraders.get(i)[0]);
+        }
+
+        return true;
     }
 
     private void markToMarket () {

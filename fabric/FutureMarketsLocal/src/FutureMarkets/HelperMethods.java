@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
 
 public class HelperMethods {
     public static final String userTable = "UserTable.csv";
@@ -18,6 +19,14 @@ public class HelperMethods {
     public HelperMethods(int maxPrice, int maxVolume) {
         this.maxPrice = maxPrice;
         this.maxVolume = maxVolume;
+    }
+
+    public double mean(double[] m) {
+        double sum = 0;
+        for (int i = 0; i < m.length; i++) {
+            sum += m[i];
+        }
+        return sum / m.length;
     }
 
     public ArrayList<int[]> queryTable(String tableName) {
@@ -34,13 +43,13 @@ public class HelperMethods {
                     try {
                         row[i] = Integer.parseInt(values[i]);
                     } catch (NumberFormatException e){
-                        System.out.println(e.getMessage());
+                        //System.out.println(e.getMessage());
                     }
                 }
                 rows.add(row);
             }
         } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+            //System.out.println(ex.getMessage());
         }
 
         return rows;
@@ -59,7 +68,7 @@ public class HelperMethods {
                   0 - find best selling price
      */
     public int findBestPrice(boolean is_best_buy) {
-        //System.out.println("entering findBestPriceOrder");
+        ////System.out.println("entering findBestPriceOrder");
 
         ArrayList<int[]> rows = queryTable(orderBook);
         int bestPrice = 0;
@@ -76,16 +85,16 @@ public class HelperMethods {
             // if 1st data entry is negative, no one is buying
             if (rows.get(0)[3] < 0)
             {
-                System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
-                System.out.println("no traders are buying");
+                ////System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
+                ////System.out.println("no traders are buying");
                 return 1;
             }
 
             // if last entry is positive, no one is selling, so take the best price from the last row
             if (rows.get(rows.size() - 1)[3] > 0)
             {
-                //System.out.println("size is" + String.valueOf(rows.size()));
-                //System.out.println("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
+                ////System.out.println("size is" + String.valueOf(rows.size()));
+                ////System.out.println("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
                 bestPrice = rows.get(rows.size() - 1)[2];
             }
             else
@@ -109,7 +118,7 @@ public class HelperMethods {
             // if last data entry is positive, no one is selling
             if (rows.get(rows.size() - 1)[3] > 0)
             {
-                System.out.println("no traders are selling");
+                ////System.out.println("no traders are selling");
                 return this.maxPrice;
             }
 
@@ -149,7 +158,7 @@ public class HelperMethods {
 
     //same as above, but does not consider orders with trader id specified
     public int[] findBestPriceOrder(boolean is_best_buy, int traderID) {
-        //System.out.println("entering findBestPriceOrder");
+        ////System.out.println("entering findBestPriceOrder");
 
         ArrayList<int[]> rows = queryTable(orderBook);
         int[] bestPrice = new int[4];
@@ -163,16 +172,16 @@ public class HelperMethods {
             // if 1st data entry is negative, no one is buying
             if (rows.get(0)[3] < 0)
             {
-                System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
-                System.out.println("no traders are buying");
+                //System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
+                //System.out.println("no traders are buying");
                 return new int[]{-1, 0, 0, 0};
             }
 
             // if last entry is positive, no one is selling, so take the best price from the last row
             if (rows.get(rows.size() - 1)[3] > 0)
             {
-                System.out.println("size is" + String.valueOf(rows.size()));
-                System.out.println("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
+                //System.out.println("size is" + String.valueOf(rows.size()));
+                //System.out.println("value of last entry is " + String.valueOf(rows.get(rows.size() - 1)[3]));
 
                 for (int i = rows.size() - 1; i >= 0; i--) {
                     int[] order = rows.get(i);
@@ -196,7 +205,7 @@ public class HelperMethods {
         } else {
             // if last data entry is positive, no one is selling
             if (rows.get(rows.size() - 1)[3] > 0) {
-                System.out.println("no traders are selling");
+                //System.out.println("no traders are selling");
                 return new int[]{-1, 0, 0, 0};
             }
 
@@ -232,8 +241,8 @@ public class HelperMethods {
 
         // if 1st data entry is negative, no one is bying
         if (rows.get(0)[3] < 0) {
-            System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
-            System.out.println("no traders are bying");
+            //System.out.println("value of first entry is " + String.valueOf(rows.get(0)[3]));
+            //System.out.println("no traders are bying");
             return false;
         } else
             return true;
@@ -247,7 +256,7 @@ public class HelperMethods {
 
         // if last data entry is positive, no one is selling
         if (rows.get(rows.size() - 1)[3] > 0) {
-            System.out.println("no traders are selling");
+            //System.out.println("no traders are selling");
             return false;
         } else
             return true;
@@ -259,7 +268,7 @@ public class HelperMethods {
         int volume = order[3];
 
         if (price < 1 || price > maxPrice) {
-            System.out.println(String.format("Price of this order is not in allowed boundaries [1, %1$d]", maxPrice));
+            //System.out.println(String.format("Price of this order is not in allowed boundaries [1, %1$d]", maxPrice));
             return false;
         }
 
@@ -268,16 +277,16 @@ public class HelperMethods {
             if (doSellingOrdersExist()) {
                 int bestSellingPrice = findBestPrice(false);
 
-                //System.out.println("bsp = " + String.valueOf(bestSellingPrice));
+                ////System.out.println("bsp = " + String.valueOf(bestSellingPrice));
                 if (price > bestSellingPrice) {
-                    System.out.println(String.format("Order's price is higher than current best selling price.\n" +
-                            "Best selling price = %1$d", bestSellingPrice));
+                    //System.out.println(String.format("Order's price is higher than current best selling price.\n" +
+                    //        "Best selling price = %1$d", bestSellingPrice));
                     return false;
                 }
             } else {
                 if (price > this.maxPrice) {
-                    System.out.println(String.format("Order's price is higher than current best selling price.\n" +
-                            "Best selling price = %1$d", this.maxPrice));
+                    //System.out.println(String.format("Order's price is higher than current best selling price.\n" +
+                    //        "Best selling price = %1$d", this.maxPrice));
                     return false;
                 }
             }
@@ -285,16 +294,16 @@ public class HelperMethods {
             if (doBuyingOrdersExist()) {
                 int bestBuyingPrice = findBestPrice(true);
 
-                //System.out.println("bbp = " + String.valueOf(bestBuyingPrice));
+                ////System.out.println("bbp = " + String.valueOf(bestBuyingPrice));
                 if (price < bestBuyingPrice) {
-                    System.out.println(String.format("Order's price is lower than current best buying price.\n" +
-                            "Best buying price = %1$d", bestBuyingPrice));
+                    //System.out.println(String.format("Order's price is lower than current best buying price.\n" +
+                    //        "Best buying price = %1$d", bestBuyingPrice));
                     return false;
                 }
             } else {
                 if (price < 1) {
-                    System.out.println(String.format("Order's price is lower than current best buying price.\n" +
-                            "Best buying price = 1"));
+                    //System.out.println(String.format("Order's price is lower than current best buying price.\n" +
+                    //        "Best buying price = 1"));
                     return false;
                 }
             }
@@ -318,8 +327,8 @@ public class HelperMethods {
         int sum = Math.abs(volume + tradersVolume + traderBuyVolume + traderSellVolume);
 
         if (sum > this.maxVolume) {
-            System.out.println(String.format("Trader's volume speculation is not in the allowed boundary of [%1$d; %2$d]",
-                    this.maxVolume * (-1), this.maxVolume));
+            //System.out.println(String.format("Trader's volume speculation is not in the allowed boundary of [%1$d; %2$d]",
+            //        this.maxVolume * (-1), this.maxVolume));
             return false;
         }
 
@@ -327,10 +336,10 @@ public class HelperMethods {
         pricesVolumes.add(new int[] {price, volume});
         int netValueSpeculation = netValueSpeculation(traderID, pricesVolumes);
 
-        //System.out.println("NVS = " + String.valueOf(netValueSpeculation));
+        ////System.out.println("NVS = " + String.valueOf(netValueSpeculation));
 
         if (netValueSpeculation < 0) {
-            System.out.println("Net value speculation of trader is negative");
+            //System.out.println("Net value speculation of trader is negative");
             return false;
         }
 
@@ -361,18 +370,18 @@ public class HelperMethods {
         sum += Math.abs(traderVolume);
 
         if (sum > this.maxVolume) {
-            System.out.println(String.format("Volume speculation of trader is higher than V_max.\n%1$d > %2$d", sum, this.maxPrice));
+            //System.out.println(String.format("Volume speculation of trader is higher than V_max.\n%1$d > %2$d", sum, this.maxPrice));
             return false;
         }
 
         int netValueSpeculation = netValueSpeculation(traderID, pricesVolumes);
 
         if (netValueSpeculation < 0) {
-            System.out.println(String.format("Trader's net value speculation = %1$d and is negative.", netValueSpeculation));
+            //System.out.println(String.format("Trader's net value speculation = %1$d and is negative.", netValueSpeculation));
             return false;
         }
 
-        System.out.println(String.format("\n\nsum = %1$d\nnvs = %2$d\n", sum, netValueSpeculation));
+        //System.out.println(String.format("\n\nsum = %1$d\nnvs = %2$d\n", sum, netValueSpeculation));
 
         return true;
     }
@@ -414,7 +423,7 @@ public class HelperMethods {
 
         result = traderCash - sum + coToLiq(traderVolume + traderBuyVolume + traderSellVolume);
 
-        //System.out.println(String.format("sum = %1$d\ncotoliq = %2$d", sum,
+        ////System.out.println(String.format("sum = %1$d\ncotoliq = %2$d", sum,
         //        coToLiq(traderVolume + traderBuyVolume - traderSellVolume)));
 
         return result;
@@ -447,47 +456,18 @@ public class HelperMethods {
 
         result = traderCash - sum + coToLiq(traderVolume + traderBuyVolume + traderSellVolume);
 
-        //System.out.println(String.format("sum = %1$d\ncotoliq = %2$d", sum,
+        ////System.out.println(String.format("sum = %1$d\ncotoliq = %2$d", sum,
         //        coToLiq(traderVolume + traderBuyVolume - traderSellVolume)));
 
         return result;
     }
 
-    private int coToLiq(int volume) {
+    public int coToLiq(int volume) {
         int result = 0;
 
         ArrayList<int[]> pricesVolumes = new ArrayList<>();
 
         if (volume > 0) {
-            pricesVolumes = getPricesVolumes(true);
-
-            int sumVolumes = 0;
-            for (int[] priceVolumeTuple : pricesVolumes) {
-                sumVolumes += priceVolumeTuple[1];
-            }
-
-            if (sumVolumes == 0) {
-                result = -volume;
-            } else if (Math.abs(sumVolumes) - volume >= 0) {
-                for (int[] priceVolumeTuple : pricesVolumes) {
-                    if (priceVolumeTuple[1] + volume <= 0) {
-                        result -= priceVolumeTuple[0] * volume;
-                        break;
-                    } else {
-                        result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
-
-                        volume += priceVolumeTuple[1];
-                    }
-                }
-            } else {
-                for (int[] priceVolumeTuple : pricesVolumes) {
-                    result -= Math.abs(priceVolumeTuple[1]) * priceVolumeTuple[0];
-                    volume += priceVolumeTuple[1];
-                }
-
-                result -= volume;
-            }
-        } else {
             pricesVolumes = getPricesVolumes(false);
 
             int sumVolumes = 0;
@@ -496,27 +476,57 @@ public class HelperMethods {
             }
 
             if (sumVolumes == 0) {
-                result = Math.abs(volume) * this.maxPrice;
-            } else if (sumVolumes - Math.abs(volume) >= 0) {
+                result = -volume;
+            } else if (sumVolumes - volume >= 0) {
                 for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
-                    int priceOB = pricesVolumes.get(i)[0];
-                    int volumeOB = pricesVolumes.get(i)[1];
-                    if (volumeOB + volume >= 0) {
-                        result += priceOB * Math.abs(volume);
+                    if (pricesVolumes.get(i)[1] - volume >= 0) {
+                        result -= pricesVolumes.get(i)[0] * volume;
                         break;
                     } else {
-                        result += volumeOB * priceOB;
+                        result -= Math.abs(pricesVolumes.get(i)[1]) * pricesVolumes.get(i)[0];
 
-                        volume += volumeOB;
+                        volume -= pricesVolumes.get(i)[1];
                     }
                 }
             } else {
                 for (int i = pricesVolumes.size() - 1; i >= 0; i--) {
-                    int priceOB = pricesVolumes.get(i)[0];
-                    int volumeOB = pricesVolumes.get(i)[1];
+                    result -= Math.abs(pricesVolumes.get(i)[1]) * pricesVolumes.get(i)[0];
+                    volume -= pricesVolumes.get(i)[1];
+                }
 
-                    result += volumeOB * priceOB;
-                    volume += volumeOB;
+                result -= volume;
+            }
+        } else {
+            pricesVolumes = getPricesVolumes(true);
+
+            int sumVolumes = 0;
+            for (int[] priceVolumeTuple : pricesVolumes) {
+                sumVolumes += priceVolumeTuple[1];
+            }
+
+            if (sumVolumes == 0) {
+                result = Math.abs(volume) * this.maxPrice;
+            } else if (Math.abs(sumVolumes) - Math.abs(volume) >= 0) {
+                for (int[] tuple : pricesVolumes) {
+                    int priceOB = tuple[0];
+                    int volumeOB = tuple[1];
+
+                    if (volumeOB - volume <= 0) {
+                        result += priceOB * Math.abs(volume);
+                        break;
+                    } else {
+                        result += Math.abs(volumeOB) * priceOB;
+
+                        volume -= volumeOB;
+                    }
+                }
+            } else {
+                for (int[] tuple : pricesVolumes) {
+                    int priceOB = tuple[0];
+                    int volumeOB = tuple[1];
+
+                    result += Math.abs(volumeOB) * priceOB;
+                    volume -= volumeOB;
                 }
 
                 result += Math.abs(volume) * this.maxPrice;
@@ -611,19 +621,19 @@ public class HelperMethods {
             int id = row[0];
 
             if (Math.abs(volume) > maxVolume) {
-                System.out.println(String.format("Trader %1$d has more volume than %2$d", row[1], this.maxVolume));
+                //System.out.println(String.format("Trader %1$d has more volume than %2$d", row[1], this.maxVolume));
                 return false;
             }
 
             int netValue = netValue(id);
             if (netValue < 0) {
-                System.out.println(String.format("Instant net value of trader %1$d is negative", id));
+                //System.out.println(String.format("Instant net value of trader %1$d is negative", id));
                 return false;
             }
 
             int netValueSpeculation = netValueSpeculation(id);
             if (netValueSpeculation < 0) {
-                System.out.println(String.format("Trader %1$d can't afford all his limit orders", id));
+                //System.out.println(String.format("Trader %1$d can't afford all his limit orders", id));
                 return false;
             }
 
@@ -634,7 +644,7 @@ public class HelperMethods {
             }
 
             if (Math.abs(sumVolumesTrader + volume) > this.maxVolume) {
-                System.out.println("Summ of volumes is larger than V_max");
+                //System.out.println("Summ of volumes is larger than V_max");
                 return false;
             }
 
@@ -642,7 +652,7 @@ public class HelperMethods {
         }
 
         if (sumVolume != 0) {
-            System.out.println("Summary of volume is not equal to zero");
+            //System.out.println("Summary of volume is not equal to zero");
             return false;
         }
 
@@ -650,11 +660,11 @@ public class HelperMethods {
         int bestBuyPrice = findBestPrice(true);
         int bestSellPrice = findBestPrice(false);
 
-        //System.out.println("bbp" + String.valueOf(bestBuyPrice));
-        //System.out.println("bsp" + String.valueOf(bestSellPrice));
+        ////System.out.println("bbp" + String.valueOf(bestBuyPrice));
+        ////System.out.println("bsp" + String.valueOf(bestSellPrice));
 
         if (!(1 <= bestBuyPrice && bestBuyPrice < bestSellPrice && bestSellPrice <= this.maxPrice)) {
-            System.out.println("Best price condition not satisfied");
+            //System.out.println("Best price condition not satisfied");
             return false;
         }
 
