@@ -7,7 +7,11 @@ The transaction rate chart is below:
 
 ![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRateGraph.png)
 
-From the results we could see that they are incorrect, because transaction rate is too high for the time it took to execute the transactions. Chaincode explorer tool is currently under development and could be unreliable.
+From the results we could see that they might be incorrect, because transaction rate is too high for the time it took to execute the transactions.
+
+Another test was done for 4 validating peers in *pbft* mode for 1000 transactions. 
+The transaction rate chart is below:
+![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRatePBFT.png)
 
 ## Usage
 ### Development mode
