@@ -254,13 +254,6 @@ getLedgerInfo( function () {
 					"blkRateGraph":blkRateGraph
 				}
 
-				to_print = {
-					"checkTime" : statsData.checkTime,
-					"txnRate": statsData.txnRate
-				}
-
-				console.log('',to_print);
-
 				statsData.txRateGraph = { "time" : txRateGraph.time.reverse() , "txRate" :txRateGraph.txRate.reverse() };
 				statsData.blkRateGraph = { "time" : blkRateGraph.time.reverse() , "blkRate" : blkRateGraph.blkRate.reverse() };
 				statsData.blkTxGraph = { "block" : blkTxGraph.block.reverse() , "txs" : blkTxGraph.txs.reverse() };
@@ -270,8 +263,7 @@ getLedgerInfo( function () {
 				var x= Math.floor(Math.random() * 834) + 631,y=Math.floor(Math.random() * 232) + 46,z=Math.floor(Math.random() * 56) + 32
 				statsData.apprTx = { "stats" : ["Approved","Pending","Rejected"] , "counts": [x,y,z] };
 
-				//console.log(' statsData ',statsData);
-				
+				console.log(' statsData ',statsData);
 				io.emit('stats',JSON.stringify(statsData));
 			}
 			, 5000);
