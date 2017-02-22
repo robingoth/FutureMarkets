@@ -36,11 +36,11 @@ In order to simulate the behavior of 4 traders you should do the following:
    This hash string will be used in the next commands.
    **NOTE**: you should wait for few minutes until the chaincode is deployed. To verify this you can run a simple query command and see if it is executed properly.
 5. In the same terminal copy and paste the following command without running it
-  `docker-compose exec vp1 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 1`
+  `docker-compose exec vp0 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 1`
 6. Do the same in other three terminal windows for three following commands:
-  1. `docker-compose exec vp2 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 2`
-  2. `docker-compose exec vp3 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 3`
-  3. `docker-compose exec vp4 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 4`
+  1. `docker-compose exec vp1 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 2`
+  2. `docker-compose exec vp2 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 3`
+  3. `docker-compose exec vp3 python /opt/gopath/src/github.com/hyperledger/fabric/examples/chaincode/java/FutureMarkets/post_order.py 44818ddf3bb5252669b9b2ef478b1c639e98f59522472543ee5495da0f3d6c2b40e4c7f559a8a77216a99904ee8e1e76c3c13837b07bcba3c46680a82a2a6149 300 4`
 7. Run all four commands in each terminal. After this the python script will send requests to the hyperledger and you will be able to see transactions in the peer log.
 
 ### Available commands:
