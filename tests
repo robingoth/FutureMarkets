@@ -137,6 +137,11 @@ peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "3", 
 peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["post_order", "1", "8", "-4"]}'
 
 peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "1"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "2"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "3"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "4"]}'
+peer chaincode invoke -l java -n FutureMarkets -c '{"Args": ["net_value_spec", "5"]}'
+
 =============================================================================================================================
 mark to market
 =============================================================================================================================
