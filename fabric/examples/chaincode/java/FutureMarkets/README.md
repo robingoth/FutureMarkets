@@ -2,7 +2,7 @@
 This is an implementation of FuturesMEX protocol for hyperledger fabric.
 
 ## Performance evaluation
-Chaincode explorer tool was used for performace measures. The decentralized protocol was running in docker container with one CPU for 1000 transactions in *noop* mode. 
+Chaincode explorer tool was used for performace measures. The decentralized protocol was running in docker container with one CPU for 1000 transactions in *noops* mode. 
 The transaction rate chart is below:
 
 ![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRateGraph.png)
