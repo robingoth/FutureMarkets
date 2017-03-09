@@ -6,12 +6,12 @@ Performance was measured using fabric core API, specifically, by utilizing two t
 
 Transaction rate was measured by dividing number of transactions (N) by difference between the timestamp of the last transaction of the second block (T_t) and the local ledger commit timestamp of the last block (T_b)
 
-`txRate = N / (T_t - T_b)`
+`txnRate = N / (T_t - T_b)`
 
 Results of 5 runs are following:
 
 ```
-0.11627906976744186, 0.12265331664580725, 0.10740903112669882, 0.11164274322169059, 0.10236055984959265
+txnRate = [0.11627906976744186, 0.12265331664580725, 0.10740903112669882, 0.11164274322169059, 0.10236055984959265]
 ```
 
 `mean = 0.112068944`
