@@ -1,3 +1,6 @@
+# Usage:
+Tool can be used even after all the transactions were processed by hyperledger. Transaction rate will be printed to the terminal.
+
 #Hyperledger Explorer
 This is the initial release of the Hyperledger explorer which provides a User Interface to explore and examine the current state of the Hyperledger blockchain in a convenient and easy to use manner. Similar to bitcoin explorers or crypto-currency explorers, information such as transaction information, network activity, recent blocks, visuals and search etc. are available that allows for information to be quickly found.
 

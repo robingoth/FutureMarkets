@@ -2,7 +2,7 @@
 This is an implementation of FuturesMEX protocol for hyperledger fabric.
 
 ## Performance evaluation
-Performance was measured using fabric core API, specifically, by utilizing two timestamps saved by the ledger: transaction timestamp (when transaction was proposed) and block local ledger commit timestamp (time at which the block was added to the ledger). More information [here!](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L89) and [here!](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L28)
+Performance was measured using fabric core API, specifically, by utilizing two timestamps saved by the ledger: transaction timestamp (when transaction was proposed) and block local ledger commit timestamp (time at which the block was added to the ledger). More information [here](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L89) and [here](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L28)
 
 Transaction rate was measured by dividing number of transactions (N) by difference between the timestamp of the last transaction of the second block (*T_t*) and the local ledger commit timestamp of the last block (T_b)
 
