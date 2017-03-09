@@ -57,7 +57,6 @@ var render = require( __dirname + "/webcontent/dynamic/");
 var ledgerData = { "chain" : { "height" : 0} , "peers" : {} , "blocks" : []};
 var statsData = null;
 app.get("/", function(req, res) {
-
 	try {
 		var ledgerDataStr = JSON.stringify(ledgerData);
 		var statsDataStr = JSON.stringify(statsData);
@@ -182,7 +181,7 @@ getLedgerInfo( function () {
 					block : [],
 					txs: []
 				}
-				var txRateGraph = {"time":[],"txRate":[]}
+				var txRateGraph = {"blockNum":[],"txRate":[]}
 				var blkRateGraph = {"time":[],"blkRate":[]}
 				statsData = {
 					"checkTime" : "",
@@ -193,9 +192,23 @@ getLedgerInfo( function () {
 					"blkRateGraph":blkRateGraph
 				};
 
+				var firstBlock = ledgerData.blocks[2]
+				var startTime = firstBlock.transactions[firstBlock.transactions.length - 1].timestamp.seconds;
+				var endTime = ledgerData.blocks[ledgerData.chain.height - 1].nonHashData.localLedgerCommitTimestamp.seconds;
+				
+				var sum = 0;
+				for (var i = ledgerData.chain.height - 1; i > 1; i--) {
+					var block = ledgerData.blocks[i];
+
+					sum += block.transactions.length;
+				}
+
+
+				txnRate = sum / (endTime - startTime);
+				console.log("txRate", txnRate);
+				console.log("blockNum", sum)
+				
 				for (var i = ledgerData.chain.height - 1; i > 0; i--) {
-					if(txRateGraph.time.length == 20)
-						break;
 					var block = ledgerData.blocks[i];
 					if (!block || !block.nonHashData || !block.transactions)
 						continue;
@@ -210,8 +223,10 @@ getLedgerInfo( function () {
 						currTime.setSeconds(endSecs);
 						currTime = currTime.toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1");
 					}
+
 					if (block.nonHashData.localLedgerCommitTimestamp.seconds >= (endSecs - 10)) {
 						blkRate++;
+
 						for (var k = 0; k < block.transactions.length; k++) {
 							txnRate++;
 							txnCount++;
@@ -230,8 +245,8 @@ getLedgerInfo( function () {
 						}
 
 
-						txRateGraph.time. push( currTime);
-						txRateGraph.txRate. push( txnRate);
+						//txRateGraph.time. push( currTime);
+						//txRateGraph.txRate. push( txnRate);
 
 						blkRateGraph.time. push( currTime);
 						blkRateGraph.blkRate. push( blkRate);
@@ -254,7 +269,7 @@ getLedgerInfo( function () {
 					"blkRateGraph":blkRateGraph
 				}
 
-				statsData.txRateGraph = { "time" : txRateGraph.time.reverse() , "txRate" :txRateGraph.txRate.reverse() };
+				statsData.txRateGraph = { "blockNum" : txRateGraph.blockNum.reverse() , "txRate" :txRateGraph.txRate.reverse() };
 				statsData.blkRateGraph = { "time" : blkRateGraph.time.reverse() , "blkRate" : blkRateGraph.blkRate.reverse() };
 				statsData.blkTxGraph = { "block" : blkTxGraph.block.reverse() , "txs" : blkTxGraph.txs.reverse() };
 				//simulated values for now. Will be fixed soon.
@@ -263,7 +278,7 @@ getLedgerInfo( function () {
 				var x= Math.floor(Math.random() * 834) + 631,y=Math.floor(Math.random() * 232) + 46,z=Math.floor(Math.random() * 56) + 32
 				statsData.apprTx = { "stats" : ["Approved","Pending","Rejected"] , "counts": [x,y,z] };
 
-				console.log(' statsData ',statsData);
+				//console.log(' statsData ',statsData);
 				io.emit('stats',JSON.stringify(statsData));
 			}
 			, 5000);

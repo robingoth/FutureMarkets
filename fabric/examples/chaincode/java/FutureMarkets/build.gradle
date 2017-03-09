@@ -80,6 +80,6 @@ dependencies {
     compile 'io.grpc:grpc-all:0.13.2'
     compile 'commons-cli:commons-cli:1.3.1'
     // uncomment the one below for docker deployment
-    //compile 'org.hyperledger:shim-client:1.0'
-    compile project(':core:chaincode:shim:java') // comment this one when using docker
+    compile 'org.hyperledger:shim-client:1.0'
+    //compile project(':core:chaincode:shim:java') // comment this one when using docker
         }

@@ -2,16 +2,19 @@
 This is an implementation of FuturesMEX protocol for hyperledger fabric.
 
 ## Performance evaluation
-Chaincode explorer tool was used for performace measures. The decentralized protocol was running in docker container with one CPU for 1000 transactions in *noops* mode. 
-The transaction rate chart is below:
+Performance was measured using fabric core API, specifically, by utilizing two timestamps saved by the ledger: transaction timestamp (when transaction was proposed) and block local ledger commit timestamp (time at which the block was added to the ledger). More information [here!](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L89) and [here!](https://github.com/hyperledger/fabric/blob/v0.6/protos/fabric.proto#L28)
 
-![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRateGraph.png)
+Transaction rate was measured by dividing number of transactions (N) by difference between the timestamp of the last transaction of the second block (*T_t*) and the local ledger commit timestamp of the last block (T_b)
 
-From the results we could see that they might be incorrect, because transaction rate is too high for the time it took to execute the transactions.
+`txRate = N / (T_t - T_b)`
 
-Another test was done for 4 validating peers in *pbft* mode for 1000 transactions. 
-The transaction rate chart is below:
-![alt text](https://github.com/robingoth/FutureMarkets/blob/master/fabric/examples/chaincode/java/FutureMarkets/tnxRatePBFT.png)
+Results of 5 runs are following:
+
+```
+0.11627906976744186, 0.12265331664580725, 0.10740903112669882, 0.11164274322169059, 0.10236055984959265
+```
+
+`mean = 0.112068944`
 
 ## Usage
 ### Development mode

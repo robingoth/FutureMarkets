@@ -1,6 +1,5 @@
 package FutureMarkets;
 
-import org.apache.commons.codec.StringDecoder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hyperledger.java.shim.ChaincodeBase;
